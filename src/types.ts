@@ -40,4 +40,31 @@ export interface Profile {
   healthCover: number
   dependents: number
   consent: boolean
+  assets: Assets;
+expenses: Expenses;
+customAssets: CustomItem[];
+customExpenses: CustomItem[];
 }
+export type Assets = {
+  property: number;
+  land: number;
+  vehicle: number;
+  jewellery: number;
+  business: number;
+  otherAssets: number;
+};
+
+export type Expenses = {
+  food: number;
+  shopping: number;
+  subscriptions: number;
+  transport: number;
+  entertainment: number;
+  health: number;
+  otherExpenses: number;
+};
+export type CustomItem = {
+  id: string;
+  name: string;
+  amount: number;
+};

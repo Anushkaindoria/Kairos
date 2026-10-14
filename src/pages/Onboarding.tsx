@@ -2,12 +2,13 @@ import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Plus, Trash2, ShieldCheck, Sparkles } from 'lucide-react'
 import { useProfile } from '../store/ProfileContext'
-import type { Profile, Goal, GoalType, GoalFlexibility, Risk } from '../types'
+import type { Profile, Goal, GoalType, GoalFlexibility, Risk, CustomItem } from '../types'
 
 const steps = [
   { emoji: '👋', title: "Let's get to know you", sub: 'Takes about 2 minutes. No paperwork.', cheer: "Let's go!", tip: 'Your age helps us pick the right investing horizon for you.' },
   { emoji: '💸', title: 'Your monthly flow', sub: 'What comes in and what goes out. Rough numbers are fine.', cheer: 'Great start!', tip: 'A healthy rule: keep fixed costs under 50% of your income.' },
   { emoji: '📈', title: 'Your money today', sub: 'Just type the amounts. We calculate the rest.', cheer: 'Halfway there!', tip: 'Spreading money across assets lowers the damage from any one crash.' },
+  { emoji: '🏠', title: 'What you own & spend', sub: 'Assets build your net worth. Spending shows your real habits.', cheer: 'Nice progress!', tip: 'Tracking where money goes is the fastest way to find extra savings.' },
   { emoji: '🎯', title: 'Your dreams', sub: 'Pick a popular goal or write your own.', cheer: 'Almost done!', tip: 'Goals under 2 years should avoid risky equity. We will handle that.' },
   { emoji: '🛡️', title: 'Your safety net', sub: 'Last one. Then we build your cockpit.', cheer: 'Final stretch!', tip: 'Aim for 6+ months of expenses saved and life cover of 10x your yearly income.' },
 ]
@@ -150,7 +151,46 @@ function Ring({ score }: { score: number }) {
     </div>
   )
 }
-
+function CustomList({
+  title, items, onChange,
+}: { title: string; items: CustomItem[]; onChange: (v: CustomItem[]) => void }) {
+  const update = (id: string, patch: Partial<CustomItem>) =>
+    onChange(items.map((i) => (i.id === id ? { ...i, ...patch } : i)))
+  return (
+    <div className="space-y-2">
+      {items.map((i) => (
+        <div key={i.id} className="flex gap-2 items-center">
+          <input
+            className={`${inputCls} flex-1`}
+            placeholder="Name (e.g. Education)"
+            value={i.name}
+            onChange={(e) => update(i.id, { name: e.target.value })}
+          />
+          <div className="relative w-36">
+            <span className="absolute left-3 top-2.5 text-slate-400 text-sm">₹</span>
+            <input
+              inputMode="numeric"
+              placeholder="0"
+              className={`${inputCls} pl-7`}
+              value={i.amount ? inr(i.amount) : ''}
+              onChange={(e) => update(i.id, { amount: Number(e.target.value.replace(/\D/g, '')) })}
+            />
+          </div>
+          <button type="button" onClick={() => onChange(items.filter((x) => x.id !== i.id))} className="text-slate-400 hover:text-red-500">
+            <Trash2 size={16} />
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange([...items, { id: crypto.randomUUID(), name: '', amount: 0 }])}
+        className="flex items-center gap-1.5 text-sm font-semibold text-brand-600"
+      >
+        <Plus size={16} /> {title}
+      </button>
+    </div>
+  )
+}
 const newGoal = (type: GoalType): Goal => ({ id: crypto.randomUUID(), type, name: '', targetAmount: 0, targetDate: '', flexibility: 'Flexible' })
 
 export default function Onboarding() {
@@ -186,6 +226,10 @@ export default function Onboarding() {
     healthCover: 0,
     dependents: 0,
     consent: false,
+    assets: { property: 0, land: 0, vehicle: 0, jewellery: 0, business: 0, otherAssets: 0 },
+    expenses: { food: 0, shopping: 0, subscriptions: 0, transport: 0, entertainment: 0, health: 0, otherExpenses: 0 },
+        customAssets: [],
+    customExpenses: [],
   })
 
   const set = <K extends keyof Profile>(k: K, v: Profile[K]) => setP((prev) => ({ ...prev, [k]: v }))
@@ -224,12 +268,12 @@ export default function Onboarding() {
       if (!p.city.trim()) return 'Tell us your city so we can personalise things.'
     }
     if (step === 1 && p.income <= 0) return 'Enter your monthly income. A rough number is fine.'
-    if (step === 3) {
+    if (step === 4) {
       if (p.goals.some((g) => g.type === 'Custom' && !(g.name ?? '').trim())) return 'Give your custom goal a name.'
       if (p.goals.some((g) => g.targetAmount <= 0)) return 'Pick a target amount for each goal.'
       if (p.goals.some((g) => !g.targetDate)) return 'Pick a target date for each goal.'
     }
-    if (step === 4 && !p.consent) return 'Please tick the consent box to continue.'
+    if (step === 5 && !p.consent) return 'Please tick the consent box to continue.'
     return ''
   }
 
@@ -384,8 +428,33 @@ export default function Onboarding() {
                 <Money label="Current monthly SIP (0 if none)" value={p.monthlySip} onChange={(v) => set('monthlySip', v)} quick={[2000, 5000, 10000]} />
               </>
             )}
-
             {step === 3 && (
+  <>
+    <div className="text-sm font-bold">Assets you own (current value)</div>
+    <div className="grid sm:grid-cols-2 gap-4">
+      <Money label="🏠 Property / House" value={p.assets.property} onChange={(v) => set('assets', { ...p.assets, property: v })} quick={[2500000, 5000000, 10000000]} />
+      <Money label="🌾 Land" value={p.assets.land} onChange={(v) => set('assets', { ...p.assets, land: v })} quick={[500000, 2500000]} />
+      <Money label="🚗 Vehicle" value={p.assets.vehicle} onChange={(v) => set('assets', { ...p.assets, vehicle: v })} quick={[50000, 300000, 800000]} />
+      <Money label="💍 Jewellery" value={p.assets.jewellery} onChange={(v) => set('assets', { ...p.assets, jewellery: v })} quick={[100000, 500000]} />
+      <Money label="🏪 Business" value={p.assets.business} onChange={(v) => set('assets', { ...p.assets, business: v })} />
+      <Money label="📦 Other assets" value={p.assets.otherAssets} onChange={(v) => set('assets', { ...p.assets, otherAssets: v })} />
+    </div>
+    <CustomList title="Add another asset" items={p.customAssets} onChange={(v) => set('customAssets', v)} />
+    <div className="text-sm font-bold pt-2">Monthly spending (approx.)</div>
+    <div className="grid sm:grid-cols-2 gap-4">
+      <Money label="🍔 Food & groceries" value={p.expenses.food} onChange={(v) => set('expenses', { ...p.expenses, food: v })} quick={[5000, 10000]} />
+      <Money label="🛍️ Shopping" value={p.expenses.shopping} onChange={(v) => set('expenses', { ...p.expenses, shopping: v })} quick={[2000, 5000]} />
+      <Money label="📺 Subscriptions" value={p.expenses.subscriptions} onChange={(v) => set('expenses', { ...p.expenses, subscriptions: v })} quick={[500, 1500]} />
+      <Money label="🚌 Transport" value={p.expenses.transport} onChange={(v) => set('expenses', { ...p.expenses, transport: v })} quick={[2000, 5000]} />
+      <Money label="🎬 Entertainment" value={p.expenses.entertainment} onChange={(v) => set('expenses', { ...p.expenses, entertainment: v })} quick={[1000, 3000]} />
+      <Money label="💊 Health" value={p.expenses.health} onChange={(v) => set('expenses', { ...p.expenses, health: v })} quick={[1000, 3000]} />
+      <Money label="📌 Other expenses" value={p.expenses.otherExpenses} onChange={(v) => set('expenses', { ...p.expenses, otherExpenses: v })} />
+    </div>
+    <CustomList title="Add another expense" items={p.customExpenses} onChange={(v) => set('customExpenses', v)} />
+  </>
+)}
+
+            {step === 4 && (
               <>
                 {p.goals.map((g, i) => {
                   const months = g.targetDate ? monthsUntil(g.targetDate) : 0
@@ -485,7 +554,7 @@ export default function Onboarding() {
               </>
             )}
 
-            {step === 4 && (
+            {step === 5 && (
               <>
                 <Field label="How long could you live on your savings if income stopped?">
                   <div className="flex flex-wrap items-center gap-3">
