@@ -1,16 +1,18 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useSearchParams} from 'react-router-dom'
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react'
+import Logo from '../components/Logo'
 
 export default function Login({ onAuth }: { onAuth: (name: string, email: string) => void }) {
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
+ const [params] = useSearchParams()
+  const [mode, setMode] = useState<'login' | 'signup'>(params.get('mode') === 'signup' ? 'signup' : 'login')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [show, setShow] = useState(false)
   const [error, setError] = useState('')
-  const navigate = useNavigate()
+  
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -20,7 +22,7 @@ export default function Login({ onAuth }: { onAuth: (name: string, email: string
     if (mode === 'signup' && password !== confirm) return setError('Passwords do not match.')
     setError('')
     onAuth(name.trim() || email.split('@')[0], email)
-    navigate('/')
+    
   }
 
   const field =
@@ -29,7 +31,7 @@ export default function Login({ onAuth }: { onAuth: (name: string, email: string
   return (
     <div className="min-h-screen flex">
       <div className="hidden lg:flex flex-1 bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 text-white p-14 flex-col justify-between">
-        <div className="text-2xl font-extrabold tracking-widest">KAIROS</div>
+        <Logo light size={56} />
         <div>
           <h1 className="text-4xl font-extrabold leading-tight">
             Your money,<br />on autopilot.

@@ -6,10 +6,10 @@ import type { Profile, Goal, GoalType, GoalFlexibility, Risk, CustomItem } from 
 
 const steps = [
   { emoji: '👋', title: "Let's get to know you", sub: 'Takes about 2 minutes. No paperwork.', cheer: "Let's go!", tip: 'Your age helps us pick the right investing horizon for you.' },
-  { emoji: '💸', title: 'Your monthly flow', sub: 'What comes in and what goes out. Rough numbers are fine.', cheer: 'Great start!', tip: 'A healthy rule: keep fixed costs under 50% of your income.' },
+  { emoji: '💸', title: 'Your monthly flow', sub: 'What comes in and what goes out. Rough numbers are fine.', cheer: 'Great start!', tip: 'A healthy rule: keep fixed costs and spending under 60% of your income.' },
   { emoji: '📈', title: 'Your money today', sub: 'Just type the amounts. We calculate the rest.', cheer: 'Halfway there!', tip: 'Spreading money across assets lowers the damage from any one crash.' },
   { emoji: '🏠', title: 'What you own & spend', sub: 'Assets build your net worth. Spending shows your real habits.', cheer: 'Nice progress!', tip: 'Tracking where money goes is the fastest way to find extra savings.' },
-  { emoji: '🎯', title: 'Your dreams', sub: 'Pick a popular goal or write your own.', cheer: 'Almost done!', tip: 'Goals under 2 years should avoid risky equity. We will handle that.' },
+  { emoji: '🎯', title: 'Your dreams', sub: 'Pick a popular goal, write your own, or skip for now.', cheer: 'Almost done!', tip: 'Goals under 2 years should avoid risky equity. We will handle that.' },
   { emoji: '🛡️', title: 'Your safety net', sub: 'Last one. Then we build your cockpit.', cheer: 'Final stretch!', tip: 'Aim for 6+ months of expenses saved and life cover of 10x your yearly income.' },
 ]
 
@@ -23,6 +23,7 @@ const goalMeta: Record<GoalType, string> = {
 }
 const goalTypes = Object.keys(goalMeta) as GoalType[]
 const customIdeas = ['Car', 'Wedding', 'Travel', 'Business', 'Gadget', 'Medical fund']
+const incomeIdeas = ['Freelance', 'Rental income', 'Dividends', 'Interest', 'Business profit', 'Pension', 'Tuition']
 
 const inr = (n: number) => n.toLocaleString('en-IN')
 const short = (n: number) =>
@@ -33,6 +34,7 @@ const inMonths = (m: number) => {
   return d.toISOString().slice(0, 10)
 }
 const monthsUntil = (d: string) => Math.max(1, Math.round((new Date(d).getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30.44)))
+const sum = (nums: number[]) => nums.reduce((a, b) => a + b, 0)
 
 const inputCls =
   'w-full bg-white/80 border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20'
@@ -137,11 +139,11 @@ function Ring({ score }: { score: number }) {
   const c = 2 * Math.PI * r
   return (
     <div className="relative w-36 h-36">
-      <svg viewBox="0 0 120 120" className="-rotate-90">
+      <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
         <circle cx="60" cy="60" r={r} stroke="rgba(255,255,255,0.15)" strokeWidth="10" fill="none" />
         <circle
           cx="60" cy="60" r={r} stroke="#22d3ee" strokeWidth="10" fill="none" strokeLinecap="round"
-          strokeDasharray={c} strokeDashoffset={c * (1 - score / 100)} className="transition-all duration-700"
+          strokeDasharray={c} strokeDashoffset={c * (1 - score / 100)} style={{ transition: 'stroke-dashoffset 700ms ease' }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -151,13 +153,32 @@ function Ring({ score }: { score: number }) {
     </div>
   )
 }
+
 function CustomList({
-  title, items, onChange,
-}: { title: string; items: CustomItem[]; onChange: (v: CustomItem[]) => void }) {
+  title, items, onChange, suggestions,
+}: { title: string; items: CustomItem[]; onChange: (v: CustomItem[]) => void; suggestions?: string[] }) {
   const update = (id: string, patch: Partial<CustomItem>) =>
     onChange(items.map((i) => (i.id === id ? { ...i, ...patch } : i)))
+  const addNamed = (name: string) => {
+    if (items.some((i) => i.name.toLowerCase() === name.toLowerCase())) return
+    onChange([...items, { id: crypto.randomUUID(), name, amount: 0 }])
+  }
   return (
     <div className="space-y-2">
+      {suggestions && (
+        <div className="flex gap-1.5 flex-wrap">
+          {suggestions.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => addNamed(s)}
+              className="px-2.5 py-1 rounded-full text-xs bg-slate-100 hover:bg-brand-500 hover:text-white text-slate-600 transition"
+            >
+              + {s}
+            </button>
+          ))}
+        </div>
+      )}
       {items.map((i) => (
         <div key={i.id} className="flex gap-2 items-center">
           <input
@@ -166,7 +187,7 @@ function CustomList({
             value={i.name}
             onChange={(e) => update(i.id, { name: e.target.value })}
           />
-          <div className="relative w-36">
+          <div className="relative w-40">
             <span className="absolute left-3 top-2.5 text-slate-400 text-sm">₹</span>
             <input
               inputMode="numeric"
@@ -191,73 +212,109 @@ function CustomList({
     </div>
   )
 }
+
 const newGoal = (type: GoalType): Goal => ({ id: crypto.randomUUID(), type, name: '', targetAmount: 0, targetDate: '', flexibility: 'Flexible' })
 
 export default function Onboarding() {
-  const { user, saveProfile } = useProfile()
+  const { user, profile, saveProfile } = useProfile()
   const navigate = useNavigate()
+  const editing = !!profile
+
   const [step, setStep] = useState(0)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
-  const [assets, setAssets] = useState({ equity: 0, debt: 0, gold: 0, cash: 0 })
-  const [emVal, setEmVal] = useState(0)
-  const [emUnit, setEmUnit] = useState<'Months' | 'Years'>('Months')
-  const [p, setP] = useState<Profile>({
-    name: user?.name ?? '',
-    email: user?.email ?? '',
-    age: 0,
-    city: '',
-    occupation: 'Salaried',
-    income: 0,
-    salaryCreditDate: 1,
-    incomeStability: 'Fixed',
-    otherIncomeType: 'None',
-    otherIncome: 0,
-    rentEmi: 0,
-    otherBills: 0,
-    loans: 0,
-    risk: 'Moderate',
-    investments: 0,
-    monthlySip: 0,
-    mix: { equity: 0, debt: 0, gold: 0, cash: 0 },
-    goals: [newGoal('Home Purchase')],
-    emergencyMonths: 0,
-    lifeCover: 0,
-    healthCover: 0,
-    dependents: 0,
-    consent: false,
-    assets: { property: 0, land: 0, vehicle: 0, jewellery: 0, business: 0, otherAssets: 0 },
-    expenses: { food: 0, shopping: 0, subscriptions: 0, transport: 0, entertainment: 0, health: 0, otherExpenses: 0 },
-        customAssets: [],
-    customExpenses: [],
+
+  const [assets, setAssets] = useState(() => {
+    if (!profile) return { equity: 0, debt: 0, gold: 0, cash: 0 }
+    const t = profile.investments || 0
+    const m = profile.mix
+    return {
+      equity: Math.round((t * (m?.equity ?? 0)) / 100),
+      debt: Math.round((t * (m?.debt ?? 0)) / 100),
+      gold: Math.round((t * (m?.gold ?? 0)) / 100),
+      cash: Math.round((t * (m?.cash ?? 0)) / 100),
+    }
+  })
+
+  const em0 = profile?.emergencyMonths ?? 0
+  const [emUnit, setEmUnit] = useState<'Months' | 'Years'>(em0 >= 12 && em0 % 12 === 0 ? 'Years' : 'Months')
+  const [emVal, setEmVal] = useState(em0 >= 12 && em0 % 12 === 0 ? em0 / 12 : em0)
+
+  const [p, setP] = useState<Profile>(() => {
+    const defaults: Profile = {
+      name: user?.name ?? '',
+      email: user?.email ?? '',
+      age: 0,
+      city: '',
+      occupation: 'Salaried',
+      income: 0,
+      salaryCreditDate: 1,
+      incomeStability: 'Fixed',
+      otherIncomeType: 'None',
+      otherIncome: 0,
+      spouseEarning: false,
+      spouseIncome: 0,
+      incomeSources: [],
+      rentEmi: 0,
+      otherBills: 0,
+      loans: 0,
+      risk: 'Moderate',
+      investments: 0,
+      monthlySip: 0,
+      mix: { equity: 0, debt: 0, gold: 0, cash: 0 },
+      goals: [newGoal('Home Purchase')],
+      emergencyMonths: 0,
+      lifeCover: 0,
+      healthCover: 0,
+      dependents: 0,
+      consent: false,
+      assets: { property: 0, land: 0, vehicle: 0, jewellery: 0, business: 0, otherAssets: 0 },
+      expenses: { food: 0, shopping: 0, subscriptions: 0, transport: 0, entertainment: 0, health: 0, otherExpenses: 0 },
+      customAssets: [],
+      customExpenses: [],
+    }
+    if (!profile) return defaults
+    const merged: Profile = { ...defaults, ...profile }
+    // old saved profiles had a single side-income value: convert it to a list item
+    if (!profile.incomeSources && profile.otherIncome > 0) {
+      merged.incomeSources = [{ id: crypto.randomUUID(), name: profile.otherIncomeType || 'Other', amount: profile.otherIncome }]
+    }
+    return merged
   })
 
   const set = <K extends keyof Profile>(k: K, v: Profile[K]) => setP((prev) => ({ ...prev, [k]: v }))
   const setAsset = (k: keyof typeof assets, v: number) => setAssets((a) => ({ ...a, [k]: v }))
   const updateGoal = (id: string, patch: Partial<Goal>) => set('goals', p.goals.map((g) => (g.id === id ? { ...g, ...patch } : g)))
-  const addGoal = () => set('goals', [...p.goals, newGoal('Wealth Growth')])
+  const addGoal = () => set('goals', [...p.goals, newGoal(p.goals.length ? 'Wealth Growth' : 'Home Purchase')])
   const removeGoal = (id: string) => set('goals', p.goals.filter((g) => g.id !== id))
 
+  // ---- live numbers (these drive the snapshot panel) ----
   const totalInvested = assets.equity + assets.debt + assets.gold + assets.cash
   const pct = (v: number) => (totalInvested ? Math.round((v / totalInvested) * 100) : 0)
   const emergencyMonths = emUnit === 'Years' ? emVal * 12 : emVal
 
-  const totalIncome = p.income + p.otherIncome
+  const otherSum = sum(p.incomeSources.map((i) => i.amount))
+  const spouseIncome = p.spouseEarning ? p.spouseIncome : 0
+  const totalIncome = p.income + spouseIncome + otherSum
   const fixed = p.rentEmi + p.otherBills
-  const free = Math.max(0, totalIncome - fixed)
-  const safeSip = Math.round((free * 0.3) / 500) * 500
-  const fixedPct = totalIncome ? Math.min(100, Math.round((fixed / totalIncome) * 100)) : 0
+  const spending = sum(Object.values(p.expenses)) + sum(p.customExpenses.map((i) => i.amount))
+  const outgo = fixed + spending
+  const free = Math.max(0, totalIncome - outgo)
+  const safeSip = Math.round((free * 0.5) / 500) * 500
+  const outgoPct = totalIncome ? Math.min(100, Math.round((outgo / totalIncome) * 100)) : 0
   const emergencyPct = Math.min(100, Math.round((emergencyMonths / 6) * 100))
   const lifeTarget = p.income * 12 * 10
   const lifePct = lifeTarget ? Math.min(100, Math.round((p.lifeCover / lifeTarget) * 100)) : 0
-  const goalsTotal = p.goals.reduce((s, g) => s + g.targetAmount, 0)
+  const goalsTotal = sum(p.goals.map((g) => g.targetAmount))
+  const assetsTotal = sum(Object.values(p.assets)) + sum(p.customAssets.map((i) => i.amount))
+  const netWorth = totalInvested + assetsTotal - p.loans
 
   const score = totalIncome
     ? Math.round(
-        25 * Math.max(0, Math.min(1, 1 - Math.max(0, fixedPct - 30) / 50)) +
+        25 * Math.max(0, Math.min(1, 1 - Math.max(0, outgoPct - 60) / 40)) +
           25 * Math.min(1, emergencyMonths / 6) +
           25 * (lifePct / 100) +
-          25 * (safeSip > 0 ? Math.min(1, p.monthlySip / safeSip) : 0),
+          25 * (safeSip > 0 ? Math.min(1, p.monthlySip / safeSip) : p.monthlySip > 0 ? 1 : 0),
       )
     : 0
   const scoreLabel = score >= 75 ? 'Excellent' : score >= 50 ? 'Good' : score >= 25 ? 'Fair' : 'Just starting'
@@ -267,11 +324,14 @@ export default function Onboarding() {
       if (p.age < 18 || p.age > 80) return 'Enter a valid age between 18 and 80.'
       if (!p.city.trim()) return 'Tell us your city so we can personalise things.'
     }
-    if (step === 1 && p.income <= 0) return 'Enter your monthly income. A rough number is fine.'
+    if (step === 1) {
+      if (p.income <= 0) return 'Enter your monthly income. A rough number is fine.'
+      if (p.spouseEarning && p.spouseIncome <= 0) return "Enter your spouse's monthly income, or choose No."
+    }
     if (step === 4) {
       if (p.goals.some((g) => g.type === 'Custom' && !(g.name ?? '').trim())) return 'Give your custom goal a name.'
-      if (p.goals.some((g) => g.targetAmount <= 0)) return 'Pick a target amount for each goal.'
-      if (p.goals.some((g) => !g.targetDate)) return 'Pick a target date for each goal.'
+      if (p.goals.some((g) => g.targetAmount <= 0)) return 'Pick a target amount for each goal, or remove the goal.'
+      if (p.goals.some((g) => !g.targetDate)) return 'Pick a target date for each goal, or remove the goal.'
     }
     if (step === 5 && !p.consent) return 'Please tick the consent box to continue.'
     return ''
@@ -282,7 +342,17 @@ export default function Onboarding() {
     const debt = pct(assets.debt)
     const gold = pct(assets.gold)
     const cash = totalInvested ? Math.max(0, 100 - eq - debt - gold) : 0
-    return { ...p, investments: totalInvested, mix: { equity: eq, debt, gold, cash }, emergencyMonths }
+    return {
+      ...p,
+      otherIncome: otherSum,
+      spouseIncome,
+      incomeSources: p.incomeSources.filter((i) => i.name.trim() || i.amount > 0),
+      customAssets: p.customAssets.filter((i) => i.name.trim() || i.amount > 0),
+      customExpenses: p.customExpenses.filter((i) => i.name.trim() || i.amount > 0),
+      investments: totalInvested,
+      mix: { equity: eq, debt, gold, cash },
+      emergencyMonths,
+    }
   }
 
   const next = () => {
@@ -309,7 +379,7 @@ export default function Onboarding() {
             }}
             className="mt-8 w-full bg-brand-600 hover:bg-brand-500 text-white font-semibold py-3 rounded-xl transition"
           >
-            Enter KAIROS
+            {editing ? 'Save and go to dashboard' : 'Enter KAIROS'}
           </button>
         </div>
       </div>
@@ -319,29 +389,36 @@ export default function Onboarding() {
   const s = steps[step]
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-8">
-      <div className="grid lg:grid-cols-[1fr_380px] gap-6 max-w-6xl w-full">
-        <div className="card p-6 sm:p-8">
+    <div className="min-h-screen flex items-start justify-center p-4 sm:p-8">
+      <div className="grid lg:grid-cols-[1fr_420px] gap-6 max-w-[1400px] w-full">
+        <div className="card p-6 sm:p-10">
           <div className="flex items-center justify-between">
             <div className="text-lg font-extrabold tracking-widest text-brand-600">KAIROS</div>
-            <div className="text-xs font-semibold text-slate-500">
-              Step {step + 1} of {steps.length} · {s.cheer}
+            <div className="flex items-center gap-4">
+              {editing && (
+                <button type="button" onClick={() => navigate('/')} className="text-xs font-semibold text-slate-500 hover:text-red-500">
+                  Cancel
+                </button>
+              )}
+              <div className="text-xs font-semibold text-slate-500">
+                Step {step + 1} of {steps.length} · {s.cheer}
+              </div>
             </div>
           </div>
           <div className="h-1.5 rounded-full bg-slate-200 mt-3 overflow-hidden">
             <div className="h-full bg-gradient-to-r from-brand-600 to-accent-400 transition-all duration-500" style={{ width: `${((step + 1) / steps.length) * 100}%` }} />
           </div>
 
-          <h2 className="text-2xl font-extrabold mt-6">
+          <h2 className="text-3xl font-extrabold mt-8">
             <span className="mr-2">{s.emoji}</span>
             {s.title}
           </h2>
           <p className="text-sm text-slate-500 mt-1">{s.sub}</p>
 
-          <div className="mt-6 space-y-5">
+          <div className="mt-8 space-y-6">
             {step === 0 && (
               <>
-                <div className="grid sm:grid-cols-2 gap-4">
+                <div className="grid sm:grid-cols-2 gap-5">
                   <Field label="Your age">
                     <input
                       inputMode="numeric"
@@ -368,27 +445,51 @@ export default function Onboarding() {
 
             {step === 1 && (
               <>
-                <Money label="Total monthly income (include family members' income)" value={p.income} onChange={(v) => set('income', v)} quick={[30000, 50000, 80000, 120000, 200000]} />
-                <Slider label="Salary credit date (day of month)" value={p.salaryCreditDate} min={1} max={31} onChange={(v) => set('salaryCreditDate', v)} />
-                <Field label="How steady is your income?">
-                  <Chips value={p.incomeStability} options={['Fixed', 'Variable', 'Irregular'] as Profile['incomeStability'][]} onChange={(v) => set('incomeStability', v)} />
-                </Field>
-                <Field label="Any side income?">
-                  <Chips
-                    value={p.otherIncomeType}
-                    options={['None', 'Freelance', 'Rent', 'Dividends', 'Side business']}
-                    onChange={(v) => {
-                      set('otherIncomeType', v)
-                      if (v === 'None') set('otherIncome', 0)
-                    }}
-                  />
-                </Field>
-                {p.otherIncomeType !== 'None' && <Money label="Side income per month" value={p.otherIncome} onChange={(v) => set('otherIncome', v)} />}
-                <div className="grid sm:grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <Money label="Your monthly income (take-home)" value={p.income} onChange={(v) => set('income', v)} quick={[30000, 50000, 80000, 120000, 200000]} />
+                  <div className="space-y-5">
+                    <Slider label="Salary credit date (day of month)" value={p.salaryCreditDate} min={1} max={31} onChange={(v) => set('salaryCreditDate', v)} />
+                    <Field label="How steady is your income?">
+                      <Chips value={p.incomeStability} options={['Fixed', 'Variable', 'Irregular'] as Profile['incomeStability'][]} onChange={(v) => set('incomeStability', v)} />
+                    </Field>
+                  </div>
+                </div>
+
+                <div className="border border-slate-200 rounded-2xl p-5 bg-white/60 space-y-4">
+                  <Field label="Is your spouse / partner an earning member?">
+                    <Chips
+                      value={p.spouseEarning ? 'Yes' : 'No'}
+                      options={['Yes', 'No'] as ('Yes' | 'No')[]}
+                      onChange={(v) => {
+                        set('spouseEarning', v === 'Yes')
+                        if (v === 'No') set('spouseIncome', 0)
+                      }}
+                      icons={{ Yes: '👫', No: '🙂' }}
+                    />
+                    <p className="text-xs text-slate-400 mt-2">Choose No if this does not apply to you.</p>
+                  </Field>
+                  {p.spouseEarning && (
+                    <div className="max-w-sm">
+                      <Money label="Spouse / partner monthly income" value={p.spouseIncome} onChange={(v) => set('spouseIncome', v)} quick={[20000, 40000, 80000]} />
+                    </div>
+                  )}
+                </div>
+
+                <div className="border border-slate-200 rounded-2xl p-5 bg-white/60 space-y-3">
+                  <div>
+                    <div className="text-sm font-bold">Other sources of income (optional)</div>
+                    <p className="text-xs text-slate-400">Tap a suggestion or add your own, then enter the monthly amount.</p>
+                  </div>
+                  <CustomList title="Add another source" items={p.incomeSources} onChange={(v) => set('incomeSources', v)} suggestions={incomeIdeas} />
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-5">
                   <Money label="Rent / Home EMI per month" value={p.rentEmi} onChange={(v) => set('rentEmi', v)} />
                   <Money label="Other fixed bills per month" value={p.otherBills} onChange={(v) => set('otherBills', v)} />
                 </div>
-                <Money label="Total loans outstanding (0 if none)" value={p.loans} onChange={(v) => set('loans', v)} />
+                <div className="max-w-md">
+                  <Money label="Total loans outstanding (0 if none)" value={p.loans} onChange={(v) => set('loans', v)} />
+                </div>
               </>
             )}
 
@@ -403,7 +504,7 @@ export default function Onboarding() {
                   />
                 </Field>
                 <div className="text-sm font-bold pt-1">Where is your money today? (leave blank if none)</div>
-                <div className="grid sm:grid-cols-2 gap-4">
+                <div className="grid sm:grid-cols-2 gap-5">
                   <Money label="📈 Stocks & equity mutual funds" value={assets.equity} onChange={(v) => setAsset('equity', v)} quick={[100000, 500000, 1000000]} />
                   <Money label="🏦 FDs, debt funds & bonds" value={assets.debt} onChange={(v) => setAsset('debt', v)} quick={[100000, 500000, 1000000]} />
                   <Money label="🪙 Gold" value={assets.gold} onChange={(v) => setAsset('gold', v)} quick={[50000, 200000]} />
@@ -411,7 +512,7 @@ export default function Onboarding() {
                 </div>
                 {totalInvested > 0 && (
                   <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
-                    <div className="flex justify-between text-sm">
+                    <div className="flex flex-wrap justify-between gap-2 text-sm">
                       <span className="font-semibold">Total: {short(totalInvested)}</span>
                       <span className="text-slate-500 text-xs">
                         Equity {pct(assets.equity)}% · Debt {pct(assets.debt)}% · Gold {pct(assets.gold)}% · Cash {pct(assets.cash)}%
@@ -425,52 +526,61 @@ export default function Onboarding() {
                     </div>
                   </div>
                 )}
-                <Money label="Current monthly SIP (0 if none)" value={p.monthlySip} onChange={(v) => set('monthlySip', v)} quick={[2000, 5000, 10000]} />
+                <div className="max-w-md">
+                  <Money label="Current monthly SIP (0 if none)" value={p.monthlySip} onChange={(v) => set('monthlySip', v)} quick={[2000, 5000, 10000]} />
+                </div>
               </>
             )}
+
             {step === 3 && (
-  <>
-    <div className="text-sm font-bold">Assets you own (current value)</div>
-    <div className="grid sm:grid-cols-2 gap-4">
-      <Money label="🏠 Property / House" value={p.assets.property} onChange={(v) => set('assets', { ...p.assets, property: v })} quick={[2500000, 5000000, 10000000]} />
-      <Money label="🌾 Land" value={p.assets.land} onChange={(v) => set('assets', { ...p.assets, land: v })} quick={[500000, 2500000]} />
-      <Money label="🚗 Vehicle" value={p.assets.vehicle} onChange={(v) => set('assets', { ...p.assets, vehicle: v })} quick={[50000, 300000, 800000]} />
-      <Money label="💍 Jewellery" value={p.assets.jewellery} onChange={(v) => set('assets', { ...p.assets, jewellery: v })} quick={[100000, 500000]} />
-      <Money label="🏪 Business" value={p.assets.business} onChange={(v) => set('assets', { ...p.assets, business: v })} />
-      <Money label="📦 Other assets" value={p.assets.otherAssets} onChange={(v) => set('assets', { ...p.assets, otherAssets: v })} />
-    </div>
-    <CustomList title="Add another asset" items={p.customAssets} onChange={(v) => set('customAssets', v)} />
-    <div className="text-sm font-bold pt-2">Monthly spending (approx.)</div>
-    <div className="grid sm:grid-cols-2 gap-4">
-      <Money label="🍔 Food & groceries" value={p.expenses.food} onChange={(v) => set('expenses', { ...p.expenses, food: v })} quick={[5000, 10000]} />
-      <Money label="🛍️ Shopping" value={p.expenses.shopping} onChange={(v) => set('expenses', { ...p.expenses, shopping: v })} quick={[2000, 5000]} />
-      <Money label="📺 Subscriptions" value={p.expenses.subscriptions} onChange={(v) => set('expenses', { ...p.expenses, subscriptions: v })} quick={[500, 1500]} />
-      <Money label="🚌 Transport" value={p.expenses.transport} onChange={(v) => set('expenses', { ...p.expenses, transport: v })} quick={[2000, 5000]} />
-      <Money label="🎬 Entertainment" value={p.expenses.entertainment} onChange={(v) => set('expenses', { ...p.expenses, entertainment: v })} quick={[1000, 3000]} />
-      <Money label="💊 Health" value={p.expenses.health} onChange={(v) => set('expenses', { ...p.expenses, health: v })} quick={[1000, 3000]} />
-      <Money label="📌 Other expenses" value={p.expenses.otherExpenses} onChange={(v) => set('expenses', { ...p.expenses, otherExpenses: v })} />
-    </div>
-    <CustomList title="Add another expense" items={p.customExpenses} onChange={(v) => set('customExpenses', v)} />
-  </>
-)}
+              <>
+                <div className="text-sm font-bold">Assets you own (current value)</div>
+                <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                  <Money label="🏠 Property / House" value={p.assets.property} onChange={(v) => set('assets', { ...p.assets, property: v })} quick={[2500000, 5000000, 10000000]} />
+                  <Money label="🌾 Land" value={p.assets.land} onChange={(v) => set('assets', { ...p.assets, land: v })} quick={[500000, 2500000]} />
+                  <Money label="🚗 Vehicle" value={p.assets.vehicle} onChange={(v) => set('assets', { ...p.assets, vehicle: v })} quick={[50000, 300000, 800000]} />
+                  <Money label="💍 Jewellery" value={p.assets.jewellery} onChange={(v) => set('assets', { ...p.assets, jewellery: v })} quick={[100000, 500000]} />
+                  <Money label="🏪 Business" value={p.assets.business} onChange={(v) => set('assets', { ...p.assets, business: v })} />
+                  <Money label="📦 Other assets" value={p.assets.otherAssets} onChange={(v) => set('assets', { ...p.assets, otherAssets: v })} />
+                </div>
+                <CustomList title="Add another asset" items={p.customAssets} onChange={(v) => set('customAssets', v)} />
+
+                <div className="text-sm font-bold pt-3">Monthly spending (approx.)</div>
+                <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                  <Money label="🍔 Food & groceries" value={p.expenses.food} onChange={(v) => set('expenses', { ...p.expenses, food: v })} quick={[5000, 10000]} />
+                  <Money label="🛍️ Shopping" value={p.expenses.shopping} onChange={(v) => set('expenses', { ...p.expenses, shopping: v })} quick={[2000, 5000]} />
+                  <Money label="📺 Subscriptions" value={p.expenses.subscriptions} onChange={(v) => set('expenses', { ...p.expenses, subscriptions: v })} quick={[500, 1500]} />
+                  <Money label="🚌 Transport" value={p.expenses.transport} onChange={(v) => set('expenses', { ...p.expenses, transport: v })} quick={[2000, 5000]} />
+                  <Money label="🎬 Entertainment" value={p.expenses.entertainment} onChange={(v) => set('expenses', { ...p.expenses, entertainment: v })} quick={[1000, 3000]} />
+                  <Money label="💊 Health" value={p.expenses.health} onChange={(v) => set('expenses', { ...p.expenses, health: v })} quick={[1000, 3000]} />
+                  <Money label="📌 Other expenses" value={p.expenses.otherExpenses} onChange={(v) => set('expenses', { ...p.expenses, otherExpenses: v })} />
+                </div>
+                <CustomList title="Add another expense" items={p.customExpenses} onChange={(v) => set('customExpenses', v)} />
+              </>
+            )}
 
             {step === 4 && (
               <>
+                {p.goals.length === 0 && (
+                  <div className="rounded-2xl border-2 border-dashed border-slate-200 p-8 text-center bg-white/50">
+                    <div className="text-4xl">🌱</div>
+                    <p className="font-bold mt-2">No goals right now. That is fine.</p>
+                    <p className="text-sm text-slate-500 mt-1">You can continue without one, and add goals later.</p>
+                  </div>
+                )}
                 {p.goals.map((g, i) => {
                   const months = g.targetDate ? monthsUntil(g.targetDate) : 0
                   const need = g.targetAmount > 0 && months > 0 ? Math.round(g.targetAmount / months) : 0
                   return (
-                    <div key={g.id} className="border border-slate-200 rounded-2xl p-4 bg-white/60 space-y-4">
+                    <div key={g.id} className="border border-slate-200 rounded-2xl p-5 bg-white/60 space-y-4">
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-bold">
                           {goalMeta[g.type]} Goal {i + 1}
                           {g.type === 'Custom' && g.name ? `: ${g.name}` : ''}
                         </span>
-                        {p.goals.length > 1 && (
-                          <button type="button" onClick={() => removeGoal(g.id)} className="text-slate-400 hover:text-red-500">
-                            <Trash2 size={16} />
-                          </button>
-                        )}
+                        <button type="button" onClick={() => removeGoal(g.id)} className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500">
+                          <Trash2 size={14} /> Remove
+                        </button>
                       </div>
                       <Chips value={g.type} options={goalTypes} onChange={(v) => updateGoal(g.id, { type: v })} icons={goalMeta} />
 
@@ -492,37 +602,39 @@ export default function Onboarding() {
                         </Field>
                       )}
 
-                      <Money
-                        label="How much will you need?"
-                        value={g.targetAmount}
-                        onChange={(v) => updateGoal(g.id, { targetAmount: v })}
-                        quick={[500000, 1000000, 2500000, 5000000, 10000000]}
-                      />
-                      <Field label="By when?">
-                        <div className="flex flex-wrap gap-1.5 mb-2">
-                          {(
-                            [
-                              ['6 mo', 6],
-                              ['1 yr', 12],
-                              ['3 yrs', 36],
-                              ['5 yrs', 60],
-                              ['10 yrs', 120],
-                            ] as [string, number][]
-                          ).map(([lbl, m]) => (
-                            <button
-                              key={lbl}
-                              type="button"
-                              onClick={() => updateGoal(g.id, { targetDate: inMonths(m) })}
-                              className={`px-2.5 py-1 rounded-full text-xs transition ${
-                                g.targetDate === inMonths(m) ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-brand-500 hover:text-white'
-                              }`}
-                            >
-                              {lbl}
-                            </button>
-                          ))}
-                        </div>
-                        <input type="date" className={inputCls} value={g.targetDate} onChange={(e) => updateGoal(g.id, { targetDate: e.target.value })} />
-                      </Field>
+                      <div className="grid md:grid-cols-2 gap-5">
+                        <Money
+                          label="How much will you need?"
+                          value={g.targetAmount}
+                          onChange={(v) => updateGoal(g.id, { targetAmount: v })}
+                          quick={[500000, 1000000, 2500000, 5000000, 10000000]}
+                        />
+                        <Field label="By when?">
+                          <div className="flex flex-wrap gap-1.5 mb-2">
+                            {(
+                              [
+                                ['6 mo', 6],
+                                ['1 yr', 12],
+                                ['3 yrs', 36],
+                                ['5 yrs', 60],
+                                ['10 yrs', 120],
+                              ] as [string, number][]
+                            ).map(([lbl, m]) => (
+                              <button
+                                key={lbl}
+                                type="button"
+                                onClick={() => updateGoal(g.id, { targetDate: inMonths(m) })}
+                                className={`px-2.5 py-1 rounded-full text-xs transition ${
+                                  g.targetDate === inMonths(m) ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-brand-500 hover:text-white'
+                                }`}
+                              >
+                                {lbl}
+                              </button>
+                            ))}
+                          </div>
+                          <input type="date" className={inputCls} value={g.targetDate} onChange={(e) => updateGoal(g.id, { targetDate: e.target.value })} />
+                        </Field>
+                      </div>
 
                       {need > 0 && (
                         <p className="text-xs bg-indigo-50 text-indigo-700 rounded-lg px-3 py-2">
@@ -549,7 +661,7 @@ export default function Onboarding() {
                   )
                 })}
                 <button type="button" onClick={addGoal} className="flex items-center gap-1.5 text-sm font-semibold text-brand-600">
-                  <Plus size={16} /> Add another dream
+                  <Plus size={16} /> {p.goals.length ? 'Add another dream' : 'Add a goal'}
                 </button>
               </>
             )}
@@ -603,7 +715,7 @@ export default function Onboarding() {
                     </button>
                   </div>
                 </Field>
-                <div className="grid sm:grid-cols-2 gap-4">
+                <div className="grid sm:grid-cols-2 gap-5">
                   <Money label="Life insurance cover" value={p.lifeCover} onChange={(v) => set('lifeCover', v)} quick={[0, 5000000, 10000000]} />
                   <Money label="Health insurance cover" value={p.healthCover} onChange={(v) => set('healthCover', v)} quick={[0, 500000, 1000000]} />
                 </div>
@@ -617,9 +729,9 @@ export default function Onboarding() {
             )}
           </div>
 
-          {error && <p className="text-sm text-red-500 mt-5">{error}</p>}
+          {error && <p className="text-sm text-red-500 mt-6">{error}</p>}
 
-          <div className="flex justify-between items-center mt-8">
+          <div className="flex justify-between items-center mt-10">
             <button
               type="button"
               onClick={() => {
@@ -641,7 +753,7 @@ export default function Onboarding() {
           </div>
         </div>
 
-        <aside className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 text-white p-7 flex flex-col gap-6 lg:min-h-[640px]">
+        <aside className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 text-white p-7 flex flex-col gap-6 lg:sticky lg:top-6 lg:self-start">
           <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-accent-400/20 blur-3xl" />
           <div className="absolute -bottom-20 -left-16 w-64 h-64 rounded-full bg-brand-500/30 blur-3xl" />
 
@@ -658,6 +770,14 @@ export default function Onboarding() {
 
           <div className="relative grid grid-cols-2 gap-3">
             <div className="rounded-2xl bg-white/10 backdrop-blur p-3.5">
+              <div className="text-[11px] text-slate-300">Total income / month</div>
+              <div className="text-xl font-extrabold mt-0.5">{short(totalIncome)}</div>
+            </div>
+            <div className="rounded-2xl bg-white/10 backdrop-blur p-3.5">
+              <div className="text-[11px] text-slate-300">Spending + bills</div>
+              <div className="text-xl font-extrabold mt-0.5">{short(outgo)}</div>
+            </div>
+            <div className="rounded-2xl bg-white/10 backdrop-blur p-3.5">
               <div className="text-[11px] text-slate-300">Free cash / month</div>
               <div className="text-xl font-extrabold mt-0.5">{short(free)}</div>
             </div>
@@ -666,8 +786,8 @@ export default function Onboarding() {
               <div className="text-xl font-extrabold text-accent-400 mt-0.5">{short(safeSip)}</div>
             </div>
             <div className="rounded-2xl bg-white/10 backdrop-blur p-3.5">
-              <div className="text-[11px] text-slate-300">Invested today</div>
-              <div className="text-xl font-extrabold mt-0.5">{short(totalInvested)}</div>
+              <div className="text-[11px] text-slate-300">Net worth</div>
+              <div className="text-xl font-extrabold mt-0.5">{netWorth < 0 ? `-${short(-netWorth)}` : short(netWorth)}</div>
             </div>
             <div className="rounded-2xl bg-white/10 backdrop-blur p-3.5">
               <div className="text-[11px] text-slate-300">Goals total</div>
@@ -676,7 +796,7 @@ export default function Onboarding() {
           </div>
 
           <div className="relative space-y-4">
-            <Bar label="Fixed costs" pct={fixedPct} note={`${fixedPct}% of income`} warn={fixedPct > 50} />
+            <Bar label="Bills + spending" pct={outgoPct} note={`${outgoPct}% of income`} warn={outgoPct > 60} />
             <Bar label="Emergency buffer" pct={emergencyPct} note={`${emergencyMonths}/6 months`} warn={emergencyPct < 50} />
             <Bar label="Life cover" pct={lifePct} note={`${lifePct}% of target`} warn={lifePct < 50} />
           </div>
@@ -685,7 +805,7 @@ export default function Onboarding() {
             <p className="relative text-xs bg-amber-400/20 text-amber-200 rounded-xl p-3">Your SIP is above the comfortable level. We'll help you balance it.</p>
           )}
 
-          <div className="relative mt-auto space-y-3">
+          <div className="relative space-y-3">
             <div className="rounded-2xl bg-white/10 backdrop-blur p-4 text-xs text-slate-200 leading-relaxed">💡 {s.tip}</div>
             <div className="flex items-center gap-2 text-[11px] text-slate-300">
               <ShieldCheck size={14} /> Calculated on your device. Nothing leaves it.

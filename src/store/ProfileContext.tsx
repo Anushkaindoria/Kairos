@@ -50,10 +50,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         login: (name, email) => setUser({ name, email }),
         saveProfile: setProfile,
         resetProfile: () => setProfile(null),
-        logout: () => {
-          setUser(null)
-          setProfile(null)
-        },
+        logout: () => setUser(null),
       }}
     >
       {children}

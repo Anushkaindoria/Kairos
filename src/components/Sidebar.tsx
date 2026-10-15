@@ -1,8 +1,10 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ArrowLeftRight, Target, TrendingUp,
-  SlidersHorizontal, Bot, ShieldCheck,
+  SlidersHorizontal, Bot, ShieldCheck, Pencil, LogOut,
 } from 'lucide-react'
+import Logo from './Logo'
+import { useProfile } from '../store/ProfileContext'
 
 const links = [
   { to: '/', label: 'Home', icon: LayoutDashboard },
@@ -15,9 +17,15 @@ const links = [
 ]
 
 export default function Sidebar() {
+  const { user, logout } = useProfile()
+  const navigate = useNavigate()
+
   return (
     <aside className="w-60 shrink-0 bg-[#0B1437] text-slate-300 p-5 flex flex-col gap-1">
-      <div className="text-white text-2xl font-bold tracking-widest mb-8 px-3">KAIROS</div>
+      <div className="mb-8 px-1">
+        <Logo light size={40} tagline={false} />
+      </div>
+
       {links.map(({ to, label, icon: Icon }) => (
         <NavLink
           key={to}
@@ -33,6 +41,25 @@ export default function Sidebar() {
           {label}
         </NavLink>
       ))}
+
+      <div className="mt-auto pt-6 border-t border-white/10 space-y-1">
+        <div className="px-3 pb-2">
+          <div className="text-sm font-semibold text-white truncate">{user?.name}</div>
+          <div className="text-xs text-slate-400 truncate">{user?.email}</div>
+        </div>
+        <button
+          onClick={() => navigate('/edit-profile')}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm hover:bg-white/10 transition"
+        >
+          <Pencil size={18} /> Edit profile
+        </button>
+        <button
+          onClick={logout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-300 hover:bg-red-500/10 transition"
+        >
+          <LogOut size={18} /> Log out
+        </button>
+      </div>
     </aside>
   )
 }
