@@ -75,3 +75,40 @@ export function actualSpend30(txs: TxLite[]) {
     .filter((t) => t.date >= cutoff && t.type === 'expense' && t.category !== 'Investing' && t.category !== 'Rent & bills')
     .reduce((a, t) => a + t.amount, 0)
 }
+export type SimMode = 'one' | 'recurring' | 'sip'
+
+export function simulate(p: Profile, txs: TxLite[], mode: SimMode, amount: number) {
+  const base = goalProgress(p, txs)
+  const r = yearlyReturn(p.risk) / 12
+  const fv = (s: number, t: number) => (s * (Math.pow(1 + r, t) - 1)) / r
+
+  const months = (T: number, s: number, L: number) => {
+    const a = s / r
+    if (s <= 0 || a <= L) return Infinity
+    return Math.ceil(Math.log((T + a) / (a - L)) / Math.log(1 + r))
+  }
+
+  const factor =
+    base.effSip > 0
+      ? Math.max(0, (base.effSip + (mode === 'sip' ? amount : mode === 'recurring' ? -amount : 0)) / base.effSip)
+      : 1
+
+  const items = base.items.map((g) => {
+    const s = g.share * factor
+    const L = mode === 'one' ? amount : 0
+    const after = months(g.targetAmount, s, L)
+    const delay = isFinite(after) && isFinite(g.monthsToFinish) ? after - g.monthsToFinish : Infinity
+    return { id: g.id, name: g.name || g.type, before: g.monthsToFinish, after, delay }
+  })
+
+  const worst = items.length ? [...items].sort((a, b) => b.delay - a.delay)[0] : null
+  const n7 = 84
+  const impact7y =
+    mode === 'one' ? -amount * Math.pow(1 + r, n7) : mode === 'recurring' ? -fv(amount, n7) : fv(amount, n7)
+
+  const nLeft = base.items[0]?.monthsLeft ?? 60
+  const g = Math.pow(1 + r, nLeft)
+  const offsetSip = mode === 'one' ? Math.round((amount * g * r) / (g - 1)) : 0
+
+  return { items, worst, impact7y, offsetSip, emi12: Math.round(amount / 12), effSip: base.effSip }
+}
