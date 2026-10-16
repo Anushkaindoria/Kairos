@@ -9,6 +9,9 @@ import {
   ASSET_META, AVG_INFLATION, FY_LABELS, RETURNS, stats, type AssetKey,
 } from '../data/marketHistory'
 import GoalPlan from '../components/GoalPlan'
+import Transactions from './pages/Transactions'
+import Investment from './pages/Investment'
+import Goals from './pages/Goals'
 
 type RiskKey = 'conservative' | 'moderate' | 'aggressive'
 
