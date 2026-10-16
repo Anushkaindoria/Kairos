@@ -1,18 +1,19 @@
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { ProfileProvider, useProfile } from './store/ProfileContext'
 import Sidebar from './components/Sidebar'
 import Page from './components/Page'
+import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Onboarding from './pages/Onboarding'
-import { useProfile } from './store/ProfileContext'
-import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
 import Transactions from './pages/Transactions'
+import Investment from './pages/Investment'
 
-export default function App() {
+function Shell() {
   const { user, profile, login } = useProfile()
-  const location = useLocation()
 
-    if (!user) {
+  // Not logged in
+  if (!user) {
     return (
       <Routes>
         <Route path="/" element={<Landing />} />
@@ -22,37 +23,41 @@ export default function App() {
     )
   }
 
-  if (!profile) {
-    return (
-      <Routes>
-        <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="*" element={<Navigate to="/onboarding" replace />} />
-      </Routes>
-    )
-  }
-    if (profile && location.pathname === '/edit-profile') {
-    return (
-      <Routes>
-        <Route path="/edit-profile" element={<Onboarding />} />
-      </Routes>
-    )
-  }
+  // Logged in, first-time onboarding
+  if (!profile) return <Onboarding />
 
+  // Logged in with profile
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <main className="flex-1 p-8 overflow-x-hidden">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/transactions" element={<Transactions />} />
-          <Route path="/goals" element={<Page title="Goals" subtitle="Milestone glidepath." />} />
-          <Route path="/investments" element={<Page title="Investment Plan" subtitle="Recommended allocation." />} />
-          <Route path="/simulator" element={<Page title="What-If Simulator" subtitle="See the impact of a purchase." />} />
-          <Route path="/assistant" element={<Page title="AI Assistant" subtitle="Local AI co-pilot." />} />
-          <Route path="/privacy" element={<Page title="Privacy & Security" subtitle="Your data stays on your device." />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
-    </div>
+    <Routes>
+      <Route path="/edit-profile" element={<Onboarding />} />
+      <Route
+        path="*"
+        element={
+          <div className="flex min-h-screen">
+            <Sidebar />
+            <main className="flex-1 overflow-y-auto p-8">
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/transactions" element={<Transactions />} />
+                <Route path="/investments" element={<Investment />} />
+                <Route path="/goals" element={<Page title="Goals" subtitle="Coming soon." />} />
+                <Route path="/simulator" element={<Page title="What-If Simulator" subtitle="Coming soon." />} />
+                <Route path="/assistant" element={<Page title="AI Assistant" subtitle="Coming soon." />} />
+                <Route path="/privacy" element={<Page title="Privacy & Security" subtitle="Coming soon." />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </main>
+          </div>
+        }
+      />
+    </Routes>
+  )
+}
+
+export default function App() {
+  return (
+    <ProfileProvider>
+      <Shell />
+    </ProfileProvider>
   )
 }
