@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard'
 import Transactions from './pages/Transactions'
 import Investment from './pages/Investment'
 import Goals from './pages/Goals'
+import Privacy from './pages/Privacy'
 
 function Shell() {
   const { user, profile, login } = useProfile()
@@ -44,7 +45,7 @@ function Shell() {
                 <Route path="/investments" element={<Investment />} />
                 <Route path="/simulator" element={<Page title="What-If Simulator" subtitle="Coming soon." />} />
                 <Route path="/assistant" element={<Page title="AI Assistant" subtitle="Coming soon." />} />
-                <Route path="/privacy" element={<Page title="Privacy & Security" subtitle="Coming soon." />} />
+                <Route path="/privacy" element={<Privacy />} />npm i @fontsource-variable/plus-jakarta-sans
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>

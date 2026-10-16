@@ -328,8 +328,19 @@ export default function Investment() {
         <p className="text-xs text-slate-400 mt-2">
           We expect about {expectedPct.toFixed(1)}% growth a year for this mix, based on the last 20 years. The bad and good cases are 3% below and above that.
         </p>
-      </div>
+            </div>   {/* end of the header div with "Your Investment Plan" */}
+
       {profile && <GoalPlan profile={profile} />}
+
+      <details className="group">
+        <summary className="cursor-pointer card p-5 font-extrabold">
+          🧮 Want to try your own numbers? (optional)
+        </summary>
+        <div className="space-y-6 mt-6">
+          {/* STEP 1 ... through the end of STEP 3 card go here, unchanged */}
+        </div>
+      </details>
+
       {/* HISTORY */}
       <details className="card p-6">
         <summary className="cursor-pointer font-extrabold">📚 See the proof: what the last 20 years looked like</summary>
