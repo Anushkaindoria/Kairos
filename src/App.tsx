@@ -9,11 +9,9 @@ import Dashboard from './pages/Dashboard'
 import Transactions from './pages/Transactions'
 import Investment from './pages/Investment'
 import Goals from './pages/Goals'
-<<<<<<< HEAD
+
 import Privacy from './pages/Privacy'
-=======
 import Simulator from './pages/Simulator'
->>>>>>> ce1e7065d6b51270566dd1eee498156d453b80e6
 
 function Shell() {
   const { user, profile, login } = useProfile()
