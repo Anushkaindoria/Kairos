@@ -305,7 +305,7 @@ export default function Goals() {
                           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                           <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={30} />
                           <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => short(v)} width={60} />
-                          <Tooltip formatter={(v: number) => short(v)} />
+                          <Tooltip formatter={(v) => short(Number(v))} />
                           <Line type="monotone" dataKey="need" name="Required path" stroke="#94a3b8" strokeDasharray="5 5" dot={false} strokeWidth={2} />
                           <Line type="monotone" dataKey="mine" name="Your path" stroke={status.color} dot={false} strokeWidth={3} />
                         </LineChart>

@@ -27,6 +27,9 @@ export interface Profile {
   incomeStability: 'Fixed' | 'Variable' | 'Irregular'
   otherIncomeType: string
   otherIncome: number
+  spouseEarning: boolean
+  spouseIncome: number
+  incomeSources: CustomItem[]
   rentEmi: number
   otherBills: number
   loans: number

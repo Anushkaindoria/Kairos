@@ -246,6 +246,7 @@ export default function Transactions() {
               onChange={(e) => setF({ ...f, custom: e.target.value })}
             />
           )}
+            {error && <p className="text-sm text-red-500">{error}</p>}
             {saved && !f.name && <p className="text-sm text-emerald-600">✅ {saved}</p>}
                     <div className="flex flex-wrap gap-3">
             <button onClick={submit} className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-brand-600 hover:bg-brand-500 text-white transition">
