@@ -8,6 +8,7 @@ import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
 import Transactions from './pages/Transactions'
 import Goals from './pages/Goals'
+import Simulator from './pages/Simulator'
 
 export default function App() {
   const { user, profile, login } = useProfile()
@@ -48,7 +49,7 @@ export default function App() {
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/goals" element={<Goals />} />
           <Route path="/investments" element={<Page title="Investment Plan" subtitle="Recommended allocation." />} />
-          <Route path="/simulator" element={<Page title="What-If Simulator" subtitle="See the impact of a purchase." />} />
+          <Route path="/simulator" element={<Simulator />} />
           <Route path="/assistant" element={<Page title="AI Assistant" subtitle="Local AI co-pilot." />} />
           <Route path="/privacy" element={<Page title="Privacy & Security" subtitle="Your data stays on your device." />} />
           <Route path="*" element={<Navigate to="/" replace />} />
