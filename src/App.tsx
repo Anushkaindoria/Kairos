@@ -7,6 +7,7 @@ import { useProfile } from './store/ProfileContext'
 import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
 import Transactions from './pages/Transactions'
+import Goals from './pages/Goals'
 
 export default function App() {
   const { user, profile, login } = useProfile()
@@ -45,7 +46,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/transactions" element={<Transactions />} />
-          <Route path="/goals" element={<Page title="Goals" subtitle="Milestone glidepath." />} />
+          <Route path="/goals" element={<Goals />} />
           <Route path="/investments" element={<Page title="Investment Plan" subtitle="Recommended allocation." />} />
           <Route path="/simulator" element={<Page title="What-If Simulator" subtitle="See the impact of a purchase." />} />
           <Route path="/assistant" element={<Page title="AI Assistant" subtitle="Local AI co-pilot." />} />

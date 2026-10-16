@@ -41,3 +41,37 @@ export function getMetrics(p: Profile) {
 
   return { income, fixed, spending, sip, budget, left, goals, requiredTotal, ratio, status, assetsTotal, netWorth }
 }
+export function goalProgress(p: Profile, txs: TxLite[] = []) {
+  const m = getMetrics(p)
+    const actual = actualSpend30(txs)
+  const extra = txs.length ? Math.max(0, actual - m.spending) : 0
+  const effSip = Math.max(0, m.sip - extra)
+  const r = yearlyReturn(p.risk) / 12
+  const totalNeed = m.requiredTotal
+  const items = m.goals.map((g) => {
+    const monthsLeft = monthsUntil(g.targetDate)
+    // is goal ko milne wala SIP share (required ke ratio mein)
+    const share = totalNeed > 0 ? (effSip * g.need) / totalNeed : 0
+    // current SIP se target tak kitne months lagenge
+    let monthsToFinish = Infinity
+    if (share > 0 && g.targetAmount > 0) {
+      const x = (g.targetAmount * r) / share + 1
+      monthsToFinish = Math.ceil(Math.log(x) / Math.log(1 + r))
+    }
+    const projected = share > 0 ? share * ((Math.pow(1 + r, monthsLeft) - 1) / r) : 0
+    const pct = g.targetAmount > 0 ? Math.min(100, Math.round((projected / g.targetAmount) * 100)) : 0
+    const gap = Math.max(0, g.need - share)
+    return { ...g, monthsLeft, share, monthsToFinish, projected, pct, gap, onTrack: share >= g.need * 0.95 }
+  })
+  return { ...m, items, actual, extra, effSip }
+}
+export type TxLite = { category: string; amount: number; type: 'expense' | 'income'; date: string }
+
+export function actualSpend30(txs: TxLite[]) {
+  const c = new Date()
+  c.setDate(c.getDate() - 30)
+  const cutoff = c.toISOString().slice(0, 10)
+  return txs
+    .filter((t) => t.date >= cutoff && t.type === 'expense' && t.category !== 'Investing' && t.category !== 'Rent & bills')
+    .reduce((a, t) => a + t.amount, 0)
+}
