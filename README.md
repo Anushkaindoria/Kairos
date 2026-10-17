@@ -44,6 +44,43 @@ export default defineConfig([
 
 ```
 
+## KAIROS local AI assistant
+
+The `/assistant` page uses a local Ollama server and the `gemma3:4b-it-qat` model. The browser sends the current profile, derived financial metrics, goals, and stored transactions to Ollama on the same machine. No public AI API is used, and chat history is kept in page memory only.
+
+### Run Ollama
+
+Install Ollama from [ollama.com](https://ollama.com), then download the model:
+
+```bash
+ollama pull gemma3:4b-it-qat
+```
+
+Start Ollama with the Vite origins allowed. On Linux/macOS:
+
+```bash
+OLLAMA_ORIGINS=http://localhost:5173,http://127.0.0.1:5173 ollama serve
+```
+
+On Windows PowerShell, set the user environment variable, restart the Ollama desktop app, or run the server in a PowerShell window:
+
+```powershell
+$env:OLLAMA_ORIGINS="http://localhost:5173,http://127.0.0.1:5173"
+ollama serve
+```
+
+In a second terminal, from this project folder:
+
+```bash
+npm ci
+cp .env.example .env.local
+npm run dev
+```
+
+The defaults in `.env.local` use `http://127.0.0.1:11434` and `gemma3:4b-it-qat`. Change `VITE_OLLAMA_BASE_URL` if Ollama runs on another machine, and restart Vite after changing environment variables.
+
+The assistant follows the local-first design in `doc/Research_Report_Globathon.pdf`: it explains financial velocity, goal feasibility, cash-flow trade-offs, and asset-liability matching while treating its output as educational guidance rather than regulated investment advice.
+
 You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
 
 ```js
