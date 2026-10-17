@@ -13,11 +13,56 @@ export const monthsUntil = (d: string) =>
 
 const yearlyReturn = (risk: Profile['risk']) => (risk === 'Conservative' ? 0.08 : risk === 'Aggressive' ? 0.13 : 0.11)
 
+export const goalFundingTarget = (g: Goal) =>
+  g.financing?.type === 'emi' ? Math.max(0, Math.min(g.targetAmount, g.financing.downPayment)) : g.targetAmount
+
+export interface EmiPlan {
+  downPayment: number
+  principal: number
+  monthly: number
+  tenureMonths: number
+  annualRate: number
+  interest: number
+  totalRepayment: number
+  totalCost: number
+}
+
+export function calculateEmi(principal: number, annualRate: number, tenureMonths: number) {
+  const n = Math.max(1, Math.round(tenureMonths))
+  const amount = Math.max(0, principal)
+  const monthlyRate = Math.max(0, annualRate) / 100 / 12
+  if (!amount) return 0
+  if (!monthlyRate) return Math.round(amount / n)
+  const factor = Math.pow(1 + monthlyRate, n)
+  return Math.round((amount * monthlyRate * factor) / (factor - 1))
+}
+
+export function goalEmi(g: Goal): EmiPlan | null {
+  if (g.financing?.type !== 'emi') return null
+  const downPayment = Math.max(0, Math.min(g.targetAmount, g.financing.downPayment))
+  const tenureMonths = Math.max(1, Math.round(g.financing.tenureMonths))
+  const annualRate = Math.max(0, g.financing.annualRate)
+  const principal = Math.max(0, g.targetAmount - downPayment)
+  const monthly = calculateEmi(principal, annualRate, tenureMonths)
+  const totalRepayment = monthly * tenureMonths
+  return {
+    downPayment,
+    principal,
+    monthly,
+    tenureMonths,
+    annualRate,
+    interest: Math.max(0, totalRepayment - principal),
+    totalRepayment,
+    totalCost: downPayment + totalRepayment,
+  }
+}
+
 export function requiredSip(g: Goal, risk: Profile['risk']): number {
-  if (!g.targetAmount || !g.targetDate) return 0
+  const target = goalFundingTarget(g)
+  if (!target || !g.targetDate) return 0
   const n = monthsUntil(g.targetDate)
   const r = yearlyReturn(risk) / 12
-  return Math.round((g.targetAmount * r) / (Math.pow(1 + r, n) - 1))
+  return Math.round((target * r) / (Math.pow(1 + r, n) - 1))
 }
 
 export type VelocityStatus = 'Accelerating' | 'On Pace' | 'Lagging' | 'No goals'
@@ -50,18 +95,19 @@ export function goalProgress(p: Profile, txs: TxLite[] = []) {
   const totalNeed = m.requiredTotal
   const items = m.goals.map((g) => {
     const monthsLeft = monthsUntil(g.targetDate)
+    const fundingTarget = goalFundingTarget(g)
     // is goal ko milne wala SIP share (required ke ratio mein)
     const share = totalNeed > 0 ? (effSip * g.need) / totalNeed : 0
     // current SIP se target tak kitne months lagenge
-    let monthsToFinish = Infinity
-    if (share > 0 && g.targetAmount > 0) {
-      const x = (g.targetAmount * r) / share + 1
+    let monthsToFinish = fundingTarget === 0 ? 0 : Infinity
+    if (share > 0 && fundingTarget > 0) {
+      const x = (fundingTarget * r) / share + 1
       monthsToFinish = Math.ceil(Math.log(x) / Math.log(1 + r))
     }
     const projected = share > 0 ? share * ((Math.pow(1 + r, monthsLeft) - 1) / r) : 0
-    const pct = g.targetAmount > 0 ? Math.min(100, Math.round((projected / g.targetAmount) * 100)) : 0
+    const pct = fundingTarget > 0 ? Math.min(100, Math.round((projected / fundingTarget) * 100)) : 100
     const gap = Math.max(0, g.need - share)
-    return { ...g, monthsLeft, share, monthsToFinish, projected, pct, gap, onTrack: share >= g.need * 0.95 }
+    return { ...g, fundingTarget, emi: goalEmi(g), monthsLeft, share, monthsToFinish, projected, pct, gap, onTrack: share >= g.need * 0.95 }
   })
   return { ...m, items, actual, extra, effSip }
 }
@@ -96,7 +142,7 @@ export function simulate(p: Profile, txs: TxLite[], mode: SimMode, amount: numbe
   const items = base.items.map((g) => {
     const s = g.share * factor
     const L = mode === 'one' ? amount : 0
-    const after = months(g.targetAmount, s, L)
+    const after = months(g.fundingTarget, s, L)
     const delay = isFinite(after) && isFinite(g.monthsToFinish) ? after - g.monthsToFinish : Infinity
     return { id: g.id, name: g.name || g.type, before: g.monthsToFinish, after, delay }
   })

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Plus, Trash2, Search, Bell, BellOff } from 'lucide-react'
 import { useProfile } from '../store/ProfileContext'
 import { getMetrics, short } from '../lib/finance'
 import { TX_KEY, loadReminder, updateReminder, markNoted, todayIso, isoOf } from '../lib/reminder'
+import { suggestTransactionCategory } from '../lib/ollama'
 
 type Tx = { id: string; name: string; category: string; amount: number; type: 'expense' | 'income'; date: string }
 
@@ -48,10 +49,49 @@ export default function Transactions() {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState('')
-  const [f, setF] = useState({ name: '', amount: 0, category: 'Food', custom: '', type: 'expense' as Tx['type'], date: todayIso() }) 
+  const [categorySuggestion, setCategorySuggestion] = useState<{ category: string; confidence: number; reason: string } | null>(null)
+  const [categoryStatus, setCategoryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
+  const [categoryEditing, setCategoryEditing] = useState(false)
+  const categoryRequest = useRef<AbortController | null>(null)
+  const [f, setF] = useState({ name: '', amount: 0, category: 'Other', custom: '', type: 'expense' as Tx['type'], date: todayIso() })
   useEffect(() => {
     localStorage.setItem(TX_KEY, JSON.stringify(txs))
   }, [txs])
+
+  useEffect(() => {
+    categoryRequest.current?.abort()
+    if (f.type !== 'expense' || f.name.trim().length < 2) {
+      setCategorySuggestion(null)
+      setCategoryStatus('idle')
+      setCategoryEditing(false)
+      return
+    }
+
+    const controller = new AbortController()
+    categoryRequest.current = controller
+    setCategorySuggestion(null)
+    setCategoryStatus('loading')
+    setCategoryEditing(false)
+    const timer = window.setTimeout(async () => {
+      try {
+        const suggestion = await suggestTransactionCategory(f.name.trim(), f.amount, controller.signal)
+        if (controller.signal.aborted) return
+        setCategorySuggestion(suggestion)
+        setCategoryStatus('ready')
+        setF((current) => (current.name === f.name && current.type === 'expense' ? { ...current, category: suggestion.category } : current))
+      } catch (cause) {
+        if ((cause as Error).name !== 'AbortError') {
+          setCategoryStatus('error')
+          setCategoryEditing(true)
+        }
+      }
+    }, 650)
+
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [f.name, f.type])
 
   const perm = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
   const notedToday = reminder.lastNoted === todayIso()
@@ -124,22 +164,22 @@ export default function Transactions() {
   const over = planned > 0 && stats.discretionary > planned
 
   return (
-    <div className="max-w-6xl space-y-6">
+    <div className="w-full max-w-6xl space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-extrabold text-ink-900">Transactions</h1>
+          <h1 className="text-2xl font-extrabold text-ink-900 sm:text-3xl">Transactions</h1>
           <p className="text-slate-500 mt-1">Note what you spend and earn each day. You can add past days too.</p>
         </div>
         <button
           onClick={() => setOpen(!open)}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-500/30 transition"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:bg-brand-500 sm:w-auto"
         >
           <Plus size={16} /> Add transaction
         </button>
       </div>
 
       <div className="grid lg:grid-cols-[1fr_1fr] gap-4">
-        <div className="card p-5 flex items-center justify-between gap-4">
+        <div className="card flex items-center justify-between gap-4 p-4 sm:p-5">
           <div>
             <div className="text-xs font-semibold text-slate-500">Today</div>
             <div className="font-bold mt-0.5">{notedToday ? '✅ You have noted today' : '📝 Not noted yet'}</div>
@@ -155,7 +195,7 @@ export default function Transactions() {
           )}
         </div>
 
-        <div className="card p-5">
+        <div className="card p-4 sm:p-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 font-bold text-sm">
               {reminder.enabled ? <Bell size={16} className="text-brand-600" /> : <BellOff size={16} className="text-slate-400" />}
@@ -199,7 +239,7 @@ export default function Transactions() {
       </div>
 
       {open && (
-        <div className="card p-6 space-y-4">
+        <div className="card space-y-4 p-4 sm:p-6">
           <div className="flex gap-2">
             {(['expense', 'income'] as const).map((k) => (
               <button
@@ -226,19 +266,73 @@ export default function Transactions() {
               />
             </div>
             {f.type === 'expense' ? (
-              <select className={inputCls} value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })}>
-                {CATS.map((c) => (
-                  <option key={c} value={c}>
-                    {ICON[c]} {c}
-                  </option>
-                ))}
-              </select>
+              <div className="space-y-2">
+                <div className={`${inputCls} flex items-center justify-between gap-2 min-h-[42px]`}>
+                   <span className={`min-w-0 break-words ${categoryStatus === 'loading' ? 'text-brand-600 font-semibold' : 'text-slate-700'}`}>
+                    {categoryStatus === 'loading'
+                      ? '🤖 AI is choosing a category…'
+                      : categoryStatus === 'idle'
+                        ? 'Category will be suggested automatically'
+                        : `${ICON[f.category] ?? '📌'} ${f.category}`}
+                  </span>
+                  {(categoryStatus === 'ready' || categoryStatus === 'error') && (
+                    <button
+                      type="button"
+                      onClick={() => setCategoryEditing(!categoryEditing)}
+                      className="shrink-0 text-xs font-bold text-brand-600 hover:text-brand-500"
+                    >
+                      {categoryEditing ? 'Done' : 'Edit'}
+                    </button>
+                  )}
+                </div>
+                {categoryEditing && (
+                  <select className={inputCls} value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })}>
+                    {CATS.map((c) => (
+                      <option key={c} value={c}>
+                        {ICON[c]} {c}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
             ) : (
               <div className={`${inputCls} text-slate-400`}>💰 Income</div>
             )}
-            <input type="date" max={todayIso()} className={inputCls} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} />
+              <input type="date" max={todayIso()} className={inputCls} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} />
           </div>
-            {f.type === 'expense' && f.category === 'Other' && (
+          {f.type === 'expense' && (
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              {categoryStatus === 'loading' && (
+                <span className="text-brand-600 font-semibold">
+                  🤖 Analyzing “{f.name.trim()}” with local AI…
+                </span>
+              )}
+              {categoryStatus === 'ready' && categorySuggestion && (
+                <>
+                  <span className="text-brand-600 font-semibold">
+                    {f.category === categorySuggestion.category
+                      ? `✅ AI marked “${f.name.trim()}” as ${categorySuggestion.category}`
+                      : `✏️ You selected ${f.category}; AI suggested ${categorySuggestion.category}`} ({Math.round(categorySuggestion.confidence * 100)}%)
+                  </span>
+                  <span className="text-slate-400">{categorySuggestion.reason}</span>
+                  {f.category !== categorySuggestion.category && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setF({ ...f, category: categorySuggestion.category })
+                        setCategoryEditing(false)
+                      }}
+                      className="font-semibold text-brand-600 hover:text-brand-500"
+                    >
+                      Use suggestion
+                    </button>
+                  )}
+                </>
+              )}
+              {categoryStatus === 'error' && <span className="text-slate-500">AI suggestion unavailable. Choose a category manually.</span>}
+            </div>
+          )}
+            {f.type === 'expense' && f.category === 'Other' && categoryStatus !== 'loading' && categoryStatus !== 'idle' && (
             <input
               className={`${inputCls} max-w-sm`}
               placeholder="Write your own category (e.g. Education)"
@@ -311,7 +405,7 @@ export default function Transactions() {
         </div>
       )}
 
-      <div className="card p-6">
+      <div className="card min-w-0 p-4 sm:p-6">
         {txs.length === 0 ? (
           <div className="text-center py-12 text-slate-500">
             <div className="text-4xl">🧾</div>
@@ -362,13 +456,13 @@ export default function Transactions() {
                     <div className="text-xs font-semibold text-slate-400 mb-1">{dateLabel(date)}</div>
                     <ul className="divide-y divide-slate-100">
                       {list.map((t) => (
-                        <li key={t.id} className="flex items-center gap-3 py-3">
+                          <li key={t.id} className="flex min-w-0 items-center gap-3 py-3">
                           <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-lg">{ICON[t.category] ?? '📌'}</div>
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-semibold truncate">{t.name}</div>
                             <div className="text-xs text-slate-400">{t.category}</div>
                           </div>
-                          <div className={`text-sm font-bold ${t.type === 'income' ? 'text-emerald-600' : 'text-slate-800'}`}>
+                          <div className={`max-w-[35%] shrink-0 break-all text-right text-sm font-bold ${t.type === 'income' ? 'text-emerald-600' : 'text-slate-800'}`}>
                             {t.type === 'income' ? '+' : '-'}₹{inr(t.amount)}
                           </div>
                           <button

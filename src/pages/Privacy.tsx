@@ -66,13 +66,13 @@ export default function Privacy() {
   ]
 
   return (
-    <div className="max-w-5xl space-y-6">
-      <div>
-        <h1 className="text-3xl font-extrabold text-ink-900">Privacy & Security</h1>
+    <div className="w-full max-w-5xl space-y-6">
+       <div>
+         <h1 className="text-2xl font-extrabold text-ink-900 sm:text-3xl">Privacy & Security</h1>
         <p className="text-slate-500 mt-1">Your money data stays on your device. Here is exactly what is stored and how to control it.</p>
       </div>
 
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 text-white p-8">
+       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 p-5 text-white sm:p-8">
         <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-accent-400/20 blur-3xl" />
         <div className="relative grid md:grid-cols-[1fr_auto] gap-6 items-center">
           <div>
@@ -84,16 +84,16 @@ export default function Privacy() {
             </p>
             <p className="text-slate-300 text-sm mt-2">Signed in as {user?.email}</p>
           </div>
-          <div className={`flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold ${online ? 'bg-white/10' : 'bg-emerald-400/20 text-emerald-200'}`}>
+           <div className={`flex max-w-full items-start gap-2 break-words rounded-2xl px-4 py-3 text-sm font-semibold ${online ? 'bg-white/10' : 'bg-emerald-400/20 text-emerald-200'}`}>
             {online ? <Wifi size={18} /> : <WifiOff size={18} />}
             {online ? 'Online. AI still runs locally; no public API is used.' : 'Offline. KAIROS keeps working.'}
           </div>
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         {pillars.map((p) => (
-          <div key={p.title} className="card p-5 flex gap-4">
+          <div key={p.title} className="card flex gap-3 p-4 sm:gap-4 sm:p-5">
             <div className="w-10 h-10 shrink-0 rounded-xl bg-brand-500/10 text-brand-600 flex items-center justify-center">
               <p.icon size={20} />
             </div>
@@ -105,7 +105,7 @@ export default function Privacy() {
         ))}
       </div>
 
-      <div className="card p-6">
+       <div className="card min-w-0 p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-extrabold">What is stored on this device</h2>
           <span className="text-xs font-semibold text-slate-500">{rows.length} items · {kb(total)}</span>
@@ -115,10 +115,10 @@ export default function Privacy() {
         ) : (
           <ul className="divide-y divide-slate-100 mt-3">
             {rows.map((r) => (
-              <li key={r.key} className="flex items-center justify-between py-3 text-sm">
+               <li key={r.key} className="flex items-start justify-between gap-3 py-3 text-sm">
                 <div className="min-w-0">
                   <div className="font-semibold">{r.label}</div>
-                  <div className="text-xs text-slate-400 truncate">{r.key.replace(/(kairos_profile_).+/, '$1…')}</div>
+                   <div className="break-all text-xs text-slate-400">{r.key.replace(/(kairos_profile_).+/, '$1…')}</div>
                 </div>
                 <span className="text-slate-500 shrink-0">{kb(r.bytes)}</span>
               </li>
@@ -147,7 +147,7 @@ export default function Privacy() {
         </div>
       </div>
 
-      <div className="card p-6">
+       <div className="card min-w-0 p-4 sm:p-6">
         <h2 className="text-lg font-extrabold">Honest limits of this prototype</h2>
         <ul className="mt-3 space-y-2 text-sm text-slate-600 list-disc pl-5">
           <li>Data is saved in your browser's local storage, unencrypted. Anyone who can use this browser profile can read it.</li>

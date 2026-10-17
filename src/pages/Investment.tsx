@@ -128,16 +128,16 @@ export default function Investment() {
   const historyEnd = history[history.length - 1]
 
   return (
-    <div className="max-w-5xl space-y-6">
+    <div className="w-full max-w-5xl space-y-6">
       <div>
-        <h1 className="text-3xl font-extrabold text-ink-900">Your Investment Plan</h1>
+         <h1 className="text-2xl font-extrabold text-ink-900 sm:text-3xl">Your Investment Plan</h1>
         <p className="text-slate-500 mt-1">
           A simple answer to three questions: how much to invest each month, where to put it, and what it could become.
         </p>
       </div>
 
       {/* STEP 1 */}
-      <div className="card p-6 space-y-6">
+       <div className="card space-y-6 p-4 sm:p-6">
         <div className="flex items-center gap-3">
           <span className="w-8 h-8 rounded-full bg-brand-600 text-white font-bold flex items-center justify-center">1</span>
           <h2 className="text-lg font-extrabold">Tell us your plan</h2>
@@ -224,7 +224,7 @@ export default function Investment() {
       </div>
 
       {/* BIG ANSWER */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 text-white p-8">
+       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 p-5 text-white sm:p-8">
         <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-accent-400/20 blur-3xl" />
         <div className="relative">
           <p className="text-slate-300 text-sm">The short answer</p>
@@ -253,7 +253,7 @@ export default function Investment() {
       </div>
 
       {/* STEP 2 */}
-      <div className="card p-6">
+       <div className="card min-w-0 p-4 sm:p-6">
         <div className="flex items-center gap-3">
           <span className="w-8 h-8 rounded-full bg-brand-600 text-white font-bold flex items-center justify-center">2</span>
           <h2 className="text-lg font-extrabold">What to do with your {short(monthly)} each month</h2>
@@ -288,7 +288,7 @@ export default function Investment() {
       </div>
 
       {/* STEP 3 */}
-      <div className="card p-6">
+      <div className="card min-w-0 p-4 sm:p-6">
         <div className="flex items-center gap-3">
           <span className="w-8 h-8 rounded-full bg-brand-600 text-white font-bold flex items-center justify-center">3</span>
           <h2 className="text-lg font-extrabold">What could happen to your money</h2>
@@ -310,14 +310,14 @@ export default function Investment() {
           </div>
         </div>
 
-        <div className="h-72 mt-5">
+         <div className="mt-5 h-64 min-w-0 sm:h-72">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={projection}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="year" label={{ value: 'Years from now', position: 'insideBottom', offset: -2 }} />
               <YAxis tickFormatter={(v) => short(Number(v))} width={70} />
               <Tooltip formatter={(v) => short(Number(v))} labelFormatter={(l) => `After ${l} years`} />
-              <Legend />
+               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line dataKey="Money you put in" stroke="#94a3b8" strokeDasharray="5 5" dot={false} />
               <Line dataKey="If markets do badly" stroke="#f59e0b" dot={false} />
               <Line dataKey="Most likely" stroke="#4f46e5" strokeWidth={3} dot={false} />
@@ -342,7 +342,7 @@ export default function Investment() {
       </details>
 
       {/* HISTORY */}
-      <details className="card p-6">
+       <details className="card min-w-0 p-4 sm:p-6">
         <summary className="cursor-pointer font-extrabold">📚 See the proof: what the last 20 years looked like</summary>
         <p className="text-sm text-slate-500 mt-3">
           If you had put ₹1 lakh in each of these in 2006, this is what you would have by March 2026:
@@ -361,14 +361,14 @@ export default function Investment() {
             </div>
           ))}
         </div>
-        <div className="h-64 mt-5">
+         <div className="mt-5 h-56 min-w-0 sm:h-64">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={history}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="fy" />
               <YAxis tickFormatter={(v) => `${v}L`} width={50} />
               <Tooltip formatter={(v) => `₹${v} lakh`} />
-              <Legend />
+               <Legend wrapperStyle={{ fontSize: 11 }} />
               {ASSETS.map((a) => (
                 <Line key={a} dataKey={a} name={ASSET_META[a].label} stroke={ASSET_META[a].color} strokeWidth={2} dot={false} />
               ))}
@@ -379,7 +379,7 @@ export default function Investment() {
       </details>
 
       {/* GLOSSARY */}
-      <details className="card p-6">
+       <details className="card p-4 sm:p-6">
         <summary className="cursor-pointer font-extrabold">💬 Words made simple</summary>
         <dl className="mt-4 space-y-3 text-sm">
           <div><dt className="font-bold">SIP</dt><dd className="text-slate-600">Putting a fixed amount into an investment every month, like a recurring deposit but for investing.</dd></div>

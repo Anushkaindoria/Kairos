@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Plus, X, ChevronDown, Trash2, Target, TrendingUp, Wallet, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useProfile } from '../store/ProfileContext'
-import { goalProgress, short } from '../lib/finance'
+import { calculateEmi, goalProgress, short, type TxLite } from '../lib/finance'
 import { TX_KEY } from '../lib/reminder'
 import type { Goal, GoalType } from '../types'
 
@@ -28,6 +28,18 @@ const goalGradient: Record<string, string> = {
 
 const inputCls =
   'w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20'
+
+const newGoalForm = () => ({
+  type: 'Custom' as GoalType,
+  name: '',
+  targetAmount: 0,
+  targetDate: '',
+  flexibility: 'Flexible' as Goal['flexibility'],
+  purchaseMode: 'cash' as 'cash' | 'emi',
+  downPayment: 0,
+  tenureMonths: 12,
+  annualRate: 0,
+})
 
 const fmtMonths = (m: number) => {
   if (!isFinite(m) || m > 1200) return 'Not reachable'
@@ -75,16 +87,10 @@ export default function Goals() {
   const [open, setOpen] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [err, setErr] = useState('')
-  const [gf, setGf] = useState({
-    type: 'Custom' as GoalType,
-    name: '',
-    targetAmount: 0,
-    targetDate: '',
-    flexibility: 'Flexible' as Goal['flexibility'],
-  })
+  const [gf, setGf] = useState(newGoalForm)
   if (!profile) return null
 
-  let txs: any[] = []
+  let txs: TxLite[] = []
   try {
     txs = JSON.parse(localStorage.getItem(TX_KEY) || '[]')
   } catch {
@@ -111,9 +117,25 @@ export default function Goals() {
     if (gf.targetAmount <= 0) return setErr('Enter a target amount.')
     if (!gf.targetDate) return setErr('Pick a target date.')
     if (new Date(gf.targetDate).getTime() <= Date.now()) return setErr('Target date must be in the future.')
+    if (gf.purchaseMode === 'emi') {
+      if (gf.downPayment < 0 || gf.downPayment >= gf.targetAmount) return setErr('Down payment must be less than the purchase price.')
+      if (gf.tenureMonths < 1 || gf.tenureMonths > 84) return setErr('Choose an EMI tenure between 1 and 84 months.')
+      if (gf.annualRate < 0 || gf.annualRate > 50) return setErr('Enter an annual interest rate between 0% and 50%.')
+    }
     setErr('')
-    saveProfile({ ...profile, goals: [...(profile.goals ?? []), { id: crypto.randomUUID(), ...gf, name: gf.name.trim() }] })
-    setGf({ ...gf, name: '', targetAmount: 0, targetDate: '' })
+    const goal: Goal = {
+      id: crypto.randomUUID(),
+      type: gf.type,
+      name: gf.name.trim(),
+      targetAmount: gf.targetAmount,
+      targetDate: gf.targetDate,
+      flexibility: gf.flexibility,
+      ...(gf.purchaseMode === 'emi'
+        ? { financing: { type: 'emi' as const, downPayment: gf.downPayment, tenureMonths: gf.tenureMonths, annualRate: gf.annualRate } }
+        : {}),
+    }
+    saveProfile({ ...profile, goals: [...(profile.goals ?? []), goal] })
+    setGf(newGoalForm())
     setAdding(false)
   }
 
@@ -135,11 +157,11 @@ export default function Goals() {
   ]
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto w-full max-w-5xl space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-extrabold text-ink-900">Your Financial Goals</h1>
+          <h1 className="text-2xl font-extrabold text-ink-900 sm:text-3xl">Your Financial Goals</h1>
           <p className="mt-1 text-slate-500">Turn your dreams into a clear, achievable plan.</p>
         </div>
         <button
@@ -155,7 +177,7 @@ export default function Goals() {
 
       {/* Add goal form */}
       {adding && (
-        <div className="card space-y-4 p-6">
+        <div className="card space-y-4 p-4 sm:p-6">
           <div className="text-sm font-bold text-ink-900">New goal</div>
           <div className="grid gap-3 sm:grid-cols-2">
             <input className={inputCls} placeholder="Goal name (e.g. Europe Trip)" value={gf.name} onChange={(e) => setGf({ ...gf, name: e.target.value })} />
@@ -169,7 +191,10 @@ export default function Goals() {
                 onChange={(e) => setGf({ ...gf, targetAmount: Number(e.target.value.replace(/\D/g, '')) })}
               />
             </div>
-            <input type="date" className={inputCls} value={gf.targetDate} onChange={(e) => setGf({ ...gf, targetDate: e.target.value })} />
+            <label className="text-xs font-semibold text-slate-500">
+              {gf.purchaseMode === 'emi' ? 'Purchase date' : 'Target date'}
+              <input type="date" className={`${inputCls} mt-1`} value={gf.targetDate} onChange={(e) => setGf({ ...gf, targetDate: e.target.value })} />
+            </label>
             <select className={inputCls} value={gf.type} onChange={(e) => setGf({ ...gf, type: e.target.value as GoalType })}>
               {GOAL_TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -177,7 +202,76 @@ export default function Goals() {
                 </option>
               ))}
             </select>
+            <label className="text-xs font-semibold text-slate-500">
+              Purchase approach
+              <select className={`${inputCls} mt-1`} value={gf.purchaseMode} onChange={(e) => setGf({ ...gf, purchaseMode: e.target.value as 'cash' | 'emi' })}>
+                <option value="cash">Save the full amount first</option>
+                <option value="emi">Buy with an EMI plan</option>
+              </select>
+            </label>
           </div>
+          {gf.purchaseMode === 'emi' && (
+            <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4">
+              <div className="flex items-start gap-3">
+                <div className="text-xl">🧾</div>
+                <div>
+                  <div className="font-bold text-indigo-950">Plan the purchase in two parts</div>
+                  <p className="mt-1 text-xs leading-5 text-indigo-800">
+                    KAIROS will plan your goal around the upfront down payment, then show the monthly repayment separately so a large purchase does not look like a regular savings goal.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <label className="text-xs font-semibold text-indigo-900">
+                  Down payment
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-2.5 text-sm text-indigo-400">₹</span>
+                    <input
+                      className={`${inputCls} border-indigo-200 pl-7`}
+                      inputMode="numeric"
+                      placeholder="Amount due upfront"
+                      value={gf.downPayment ? gf.downPayment.toLocaleString('en-IN') : ''}
+                      onChange={(e) => setGf({ ...gf, downPayment: Number(e.target.value.replace(/\D/g, '')) })}
+                    />
+                  </div>
+                </label>
+                <label className="text-xs font-semibold text-indigo-900">
+                  EMI tenure
+                  <div className="relative mt-1">
+                    <input
+                      className={`${inputCls} border-indigo-200 pr-12`}
+                      type="number"
+                      min="1"
+                      max="84"
+                      value={gf.tenureMonths}
+                      onChange={(e) => setGf({ ...gf, tenureMonths: Number(e.target.value) })}
+                    />
+                    <span className="absolute right-3 top-2.5 text-xs text-indigo-400">months</span>
+                  </div>
+                </label>
+                <label className="text-xs font-semibold text-indigo-900">
+                  Annual interest rate
+                  <div className="relative mt-1">
+                    <input
+                      className={`${inputCls} border-indigo-200 pr-8`}
+                      type="number"
+                      min="0"
+                      max="50"
+                      step="0.1"
+                      value={gf.annualRate}
+                      onChange={(e) => setGf({ ...gf, annualRate: Number(e.target.value) })}
+                    />
+                    <span className="absolute right-3 top-2.5 text-xs text-indigo-400">%</span>
+                  </div>
+                </label>
+              </div>
+              {gf.targetAmount > 0 && gf.downPayment < gf.targetAmount && (
+                <div className="mt-3 rounded-xl bg-white/80 px-3 py-2 text-sm text-indigo-900">
+                  Estimated repayment: <b>{short(calculateEmi(gf.targetAmount - gf.downPayment, gf.annualRate, gf.tenureMonths))}/month</b> for {gf.tenureMonths} months.
+                </div>
+              )}
+            </div>
+          )}
           {err && <p className="text-sm text-red-500">{err}</p>}
           <div className="flex gap-3">
             <button onClick={saveGoal} className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-500">
@@ -192,7 +286,7 @@ export default function Goals() {
 
       {/* Summary tiles */}
       {d.items.length > 0 && (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {tiles.map((t) => (
             <div key={t.label} className="card p-4">
               <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${t.tone}`}>
@@ -237,22 +331,24 @@ export default function Goals() {
           const finishDate = isFinite(g.monthsToFinish) && g.monthsToFinish <= 1200 ? monthYear(addMonths(g.monthsToFinish)) : null
           return (
             <div key={g.id} className="card overflow-hidden">
-              <button className="flex w-full items-center gap-4 p-4 text-left sm:gap-5" onClick={() => setOpen(isOpen ? null : g.id)}>
-                <div
-                  className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-4xl shadow-md ${goalGradient[g.type] ?? goalGradient.Custom}`}
+               <button className="flex w-full items-center gap-3 p-3 text-left sm:gap-5 sm:p-4" onClick={() => setOpen(isOpen ? null : g.id)}>
+                 <div
+                   className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-3xl shadow-md sm:h-20 sm:w-20 sm:text-4xl ${goalGradient[g.type] ?? goalGradient.Custom}`}
                 >
                   {goalIcon[g.type] ?? '✨'}
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-lg font-bold text-ink-900">{g.name || g.type}</span>
-                    {i === 0 && <span className="rounded-full bg-brand-500/10 px-2 py-0.5 text-[11px] font-semibold text-brand-600">Primary goal</span>}
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${status.cls}`}>{status.label}</span>
-                  </div>
-                  <div className="mt-0.5 text-sm text-slate-500">
-                    {short(g.targetAmount)} target • {monthYear(new Date(g.targetDate))} • {Math.round((g.monthsLeft / 12) * 10) / 10} yrs left
-                  </div>
+                   <div className="flex flex-wrap items-center gap-2">
+                     <span className="text-lg font-bold text-ink-900">{g.name || g.type}</span>
+                     {i === 0 && <span className="rounded-full bg-brand-500/10 px-2 py-0.5 text-[11px] font-semibold text-brand-600">Primary goal</span>}
+                    {g.emi && <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">EMI purchase</span>}
+                     <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${status.cls}`}>{status.label}</span>
+                   </div>
+                   <div className="mt-0.5 text-sm text-slate-500">
+                    {g.emi ? `${short(g.targetAmount)} purchase • ${short(g.fundingTarget)} down payment` : `${short(g.targetAmount)} target`}{' '}
+                    • {monthYear(new Date(g.targetDate))} • {Math.round((g.monthsLeft / 12) * 10) / 10} yrs left
+                   </div>
                   <div className="mt-2 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-slate-200">
                     <div className="h-full rounded-full" style={{ width: `${g.pct}%`, background: status.color }} />
                   </div>
@@ -269,9 +365,37 @@ export default function Goals() {
                 <ChevronDown size={20} className={`shrink-0 text-slate-400 transition ${isOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              {isOpen && (
-                <div className="space-y-5 border-t border-slate-100 bg-slate-50/60 p-5">
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+               {isOpen && (
+                 <div className="space-y-5 border-t border-slate-100 bg-slate-50/60 p-5">
+                  {g.emi && (
+                    <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4 text-sm text-indigo-950">
+                      <div className="font-bold">EMI purchase plan</div>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-xl bg-white/80 p-3">
+                          <div className="text-xs text-indigo-600">Save by purchase date</div>
+                          <div className="mt-0.5 font-bold">{short(g.emi.downPayment)}</div>
+                        </div>
+                        <div className="rounded-xl bg-white/80 p-3">
+                          <div className="text-xs text-indigo-600">Monthly EMI</div>
+                          <div className="mt-0.5 font-bold">{short(g.emi.monthly)}</div>
+                          <div className="text-xs text-indigo-600">for {g.emi.tenureMonths} months</div>
+                        </div>
+                        <div className="rounded-xl bg-white/80 p-3">
+                          <div className="text-xs text-indigo-600">Total repayment</div>
+                          <div className="mt-0.5 font-bold">{short(g.emi.totalRepayment)}</div>
+                          <div className="text-xs text-indigo-600">{g.emi.annualRate}% annual interest</div>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-xs leading-5 text-indigo-800">
+                        After the purchase date, this EMI will sit alongside your goal plan. You currently have{' '}
+                        <b>{short(Math.max(0, d.left))}/month</b> left after your planned SIP and spending.
+                        {g.emi.monthly > Math.max(0, d.left)
+                          ? ' The repayment is higher than that buffer, so extend the goal, increase income, or lower the purchase price before committing.'
+                          : ' That leaves room for the repayment without reducing your current SIP plan.'}
+                      </p>
+                    </div>
+                  )}
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     {[
                       { l: 'Required SIP', v: `${short(g.need)}/mo` },
                       { l: 'Your SIP for this goal', v: `${short(g.share)}/mo` },
@@ -299,7 +423,7 @@ export default function Goals() {
 
                   <div>
                     <div className="mb-2 text-sm font-bold text-ink-900">Glidepath</div>
-                    <div className="h-56 rounded-xl bg-white p-3">
+                     <div className="h-56 min-w-0 rounded-xl bg-white p-2 sm:p-3">
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={glide(g.monthsLeft, g.share, g.need)}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -335,7 +459,7 @@ export default function Goals() {
       {worst && (
         <div className="card flex flex-wrap items-center gap-4 border border-brand-500/20 bg-gradient-to-r from-brand-500/10 to-accent-400/10 p-5">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-2xl shadow">🎯</div>
-          <div className="min-w-[240px] flex-1">
+           <div className="min-w-0 flex-1 sm:min-w-[240px]">
             <div className="font-bold text-brand-600">Goal Feasibility Analysis</div>
             <p className="mt-1 text-sm text-slate-600">
               Based on your current SIP of {short(d.effSip)}/month

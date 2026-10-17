@@ -27,7 +27,7 @@ export default function Logo({
       </svg>
       {showText && (
         <div className="leading-none">
-          <div className="text-[1.8rem] font-extrabold tracking-[0.16em]">
+            <div className="text-[clamp(1.25rem,5vw,1.8rem)] font-extrabold tracking-[0.16em]">
             <span className={light ? 'text-white' : 'text-ink-900'}>KAI</span>
             <span className="bg-gradient-to-r from-brand-600 to-accent-400 bg-clip-text text-transparent">ROS</span>
           </div>
