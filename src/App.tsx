@@ -1,7 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { ProfileProvider, useProfile } from './store/ProfileContext'
 import Sidebar from './components/Sidebar'
-import Page from './components/Page'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Onboarding from './pages/Onboarding'
@@ -12,6 +11,7 @@ import Goals from './pages/Goals'
 
 import Privacy from './pages/Privacy'
 import Simulator from './pages/Simulator'
+import Assistant from './pages/Assistant'
 
 function Shell() {
   const { user, profile, login } = useProfile()
@@ -46,8 +46,8 @@ function Shell() {
                 <Route path="/goals" element={<Goals />} />
                 <Route path="/investments" element={<Investment />} />
                 <Route path="/simulator" element={<Simulator />} />
-                <Route path="/assistant" element={<Page title="AI Assistant" subtitle="Coming soon." />} />
-                <Route path="/privacy" element={<Privacy />} />npm i @fontsource-variable/plus-jakarta-sans
+                <Route path="/assistant" element={<Assistant />} />
+                <Route path="/privacy" element={<Privacy />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>

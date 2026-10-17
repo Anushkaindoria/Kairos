@@ -59,7 +59,7 @@ export default function Privacy() {
   }
 
   const pillars = [
-    { icon: Cpu, title: 'AI runs on your device', text: 'Every calculation and suggestion is computed in your browser. No public AI API is called.' },
+    { icon: Cpu, title: 'AI runs on your device', text: 'Calculations run in the browser and the assistant runs through your local Ollama process. No public AI API is called.' },
     { icon: ServerOff, title: 'No server, no upload', text: 'KAIROS has no backend. Your income, goals and transactions are never sent anywhere.' },
     { icon: KeyRound, title: 'You stay in control', text: 'Download everything or erase it all with one tap, below. No account is held on our side.' },
     { icon: ShieldCheck, title: 'Consent first', text: 'On-device analysis starts only after you accept the consent box during setup.' },
@@ -80,13 +80,13 @@ export default function Privacy() {
               <Lock size={16} /> 100% on-device
             </div>
             <p className="text-2xl font-extrabold mt-2 leading-snug">
-              Nothing you enter in KAIROS leaves this browser.
+              Nothing you enter in KAIROS leaves this device.
             </p>
             <p className="text-slate-300 text-sm mt-2">Signed in as {user?.email}</p>
           </div>
           <div className={`flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold ${online ? 'bg-white/10' : 'bg-emerald-400/20 text-emerald-200'}`}>
             {online ? <Wifi size={18} /> : <WifiOff size={18} />}
-            {online ? 'Online. KAIROS still sends no data.' : 'Offline. KAIROS keeps working.'}
+            {online ? 'Online. AI still runs locally; no public API is used.' : 'Offline. KAIROS keeps working.'}
           </div>
         </div>
       </div>
@@ -153,9 +153,10 @@ export default function Privacy() {
           <li>Data is saved in your browser's local storage, unencrypted. Anyone who can use this browser profile can read it.</li>
           <li>Login is local to this device in the prototype. There is no server-side account yet.</li>
           <li>Clearing browser data or switching browsers removes your saved plan unless you download it first.</li>
+          <li>The AI Assistant sends the selected financial context only to the Ollama process you run locally; it does not call a public AI API.</li>
         </ul>
         <div className="mt-4 rounded-2xl bg-indigo-50 border border-indigo-200 p-4 text-sm text-indigo-900">
-          <b>Planned for the full build:</b> encrypt stored data with the browser's Web Crypto API using a passcode, add biometric lock on mobile, and run the AI assistant with a local model in the browser.
+          <b>Prototype note:</b> the assistant uses a local Ollama model. Encrypt stored data with the browser's Web Crypto API using a passcode and add biometric lock on mobile in the full build.
         </div>
       </div>
 
