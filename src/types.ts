@@ -8,6 +8,13 @@ export type GoalType =
   | 'Custom'
 export type GoalFlexibility = 'Strict' | 'Flexible'
 
+export interface GoalFinancing {
+  type: 'emi'
+  downPayment: number
+  tenureMonths: number
+  annualRate: number
+}
+
 export interface Goal {
   id: string
   type: GoalType
@@ -15,6 +22,8 @@ export interface Goal {
   targetAmount: number
   targetDate: string
   flexibility: GoalFlexibility
+  /** Optional financing plan for a purchase goal. Existing goals remain cash goals. */
+  financing?: GoalFinancing
 }
 export interface Profile {
   name: string

@@ -10,6 +10,8 @@
 }
 
 body {
+  min-width: 320px;
+  overflow-x: hidden;
   font-family: var(--font-sans);
   background:
     radial-gradient(900px 500px at 100% 0%, rgba(99, 102, 241, 0.12), transparent 60%),
@@ -24,4 +26,11 @@ body {
   border: 1px solid rgba(15, 23, 42, 0.06);
   border-radius: 1rem;
   box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+}
+
+button,
+input,
+select,
+textarea {
+  max-width: 100%;
 }

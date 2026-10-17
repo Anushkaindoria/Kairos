@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { Goal, Profile, Risk } from '../types'
-import { getMetrics, short, monthsUntil, requiredSip } from '../lib/finance'
+import { getMetrics, short, monthsUntil, requiredSip, goalEmi, goalFundingTarget } from '../lib/finance'
 import { ASSET_META, RETURNS, cagr, type AssetKey } from '../data/marketHistory'
 
 
@@ -48,7 +48,7 @@ export default function GoalPlan({ profile }: { profile: Profile }) {
 
   if (goals.length === 0) {
     return (
-      <div className="card p-8 text-center">
+       <div className="card p-6 text-center sm:p-8">
         <div className="text-4xl">🌱</div>
         <p className="font-bold mt-2">Add a goal and we will tell you exactly how much to invest.</p>
         <Link to="/goals" className="inline-block mt-3 text-brand-600 font-semibold text-sm">Go to Goals</Link>
@@ -69,7 +69,7 @@ export default function GoalPlan({ profile }: { profile: Profile }) {
     const mix = mixFor(g, profile.risk)
     const ret = expected(mix)
     const r = yr / 12
-    return { g, n, mix, ret, r, need: requiredSip(g, profile.risk) }
+    return { g, n, mix, ret, r, need: requiredSip(g, profile.risk), fundingTarget: goalFundingTarget(g), emi: goalEmi(g) }
   })
   const needTotal = base.reduce((a, x) => a + x.need, 0)
 
@@ -80,13 +80,15 @@ export default function GoalPlan({ profile }: { profile: Profile }) {
   const recommended = canDoAll ? wanted : Math.floor(maxAfford / 500) * 500
 
   // 3) share it out: Strict first, then earliest date
-  let pool = recommended
-  const rows = base.map((x) => {
-    const give = Math.min(x.need, pool)
-    pool -= give
-    const shortfall = Math.max(0, x.g.targetAmount - fvOf(give, x.n, x.r))
+  const gives = base.map((x, index) => {
+    const used = base.slice(0, index).reduce((total, prior) => total + Math.min(prior.need, Math.max(0, recommended - total)), 0)
+    return Math.min(x.need, Math.max(0, recommended - used))
+  })
+  const rows = base.map((x, index) => {
+    const give = gives[index]
+    const shortfall = Math.max(0, x.fundingTarget - fvOf(give, x.n, x.r))
     const status = give >= x.need * 0.98 ? 'On track' : give > 0 ? 'Needs more' : 'Not funded'
-    const lateBy = status === 'On track' ? 0 : monthsToReach(x.g.targetAmount, give, x.r) - x.n
+    const lateBy = status === 'On track' ? 0 : monthsToReach(x.fundingTarget, give, x.r) - x.n
     const name = x.g.type === 'Custom' && x.g.name ? x.g.name : x.g.type
     return { ...x, give, shortfall, status, lateBy, name }
   })
@@ -121,11 +123,11 @@ export default function GoalPlan({ profile }: { profile: Profile }) {
   return (
     <div className="space-y-6">
       {/* HERO ANSWER */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 text-white p-8">
+       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 p-5 text-white sm:p-8">
         <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-accent-400/20 blur-3xl" />
         <div className="relative">
           <p className="text-slate-300 text-sm">To reach all {goals.length} of your goals, invest</p>
-          <div className="text-5xl sm:text-6xl font-extrabold mt-2 text-accent-400">
+           <div className="mt-2 text-4xl font-extrabold text-accent-400 sm:text-6xl">
             {short(recommended)}<span className="text-xl text-slate-300 font-semibold"> every month</span>
           </div>
           <p className={`mt-4 text-sm font-semibold inline-block rounded-full px-3 py-1 ${canDoAll ? 'bg-emerald-400/20 text-emerald-200' : 'bg-amber-400/20 text-amber-200'}`}>
@@ -142,7 +144,7 @@ export default function GoalPlan({ profile }: { profile: Profile }) {
       </div>
 
       {/* WHERE TO PUT IT */}
-      <div className="card p-6">
+       <div className="card min-w-0 p-4 sm:p-6">
         <h2 className="text-lg font-extrabold">Put your {short(recommended)} here</h2>
         <p className="text-sm text-slate-500 mt-1">Split the SIP exactly like this. No other choices needed.</p>
         <div className="h-3 rounded-full overflow-hidden flex mt-4 bg-slate-200">
@@ -164,7 +166,7 @@ export default function GoalPlan({ profile }: { profile: Profile }) {
       </div>
 
       {/* TO DO */}
-      <div className="card p-6">
+       <div className="card min-w-0 p-4 sm:p-6">
         <h2 className="text-lg font-extrabold">What to do now</h2>
         <ol className="mt-4 space-y-2.5">
           {todo.map((t, i) => (
@@ -177,15 +179,15 @@ export default function GoalPlan({ profile }: { profile: Profile }) {
       </div>
 
       {/* GOAL BY GOAL */}
-      <details className="card p-6" open={behind.length > 0}>
+       <details className="card min-w-0 p-4 sm:p-6" open={behind.length > 0}>
         <summary className="cursor-pointer font-extrabold">
           🎯 Goal by goal {behind.length > 0 ? `(${behind.length} need attention)` : '(all on track)'}
         </summary>
         <div className="grid lg:grid-cols-2 gap-4 mt-4">
           {rows.map((x) => (
             <div key={x.g.id} className="rounded-2xl border border-slate-200 bg-white/70 p-5">
-              <div className="flex items-center justify-between gap-2">
-                <div className="font-bold">{ICON[x.g.type]} {x.name}</div>
+               <div className="flex items-start justify-between gap-2">
+                 <div className="min-w-0 break-words font-bold">{ICON[x.g.type]} {x.name}</div>
                 <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
                   x.status === 'On track' ? 'bg-emerald-100 text-emerald-700'
                     : x.status === 'Needs more' ? 'bg-amber-100 text-amber-700'
@@ -193,9 +195,14 @@ export default function GoalPlan({ profile }: { profile: Profile }) {
                   {x.status}
                 </span>
               </div>
-              <div className="text-xs text-slate-500 mt-1">
-                {short(x.g.targetAmount)} in {fmtMonths(x.n)} · {x.g.flexibility === 'Strict' ? '🔒 Strict' : '🌊 Flexible'}
-              </div>
+               <div className="text-xs text-slate-500 mt-1">
+                 {x.emi ? `${short(x.fundingTarget)} down payment for ${short(x.g.targetAmount)} purchase` : short(x.fundingTarget)} in {fmtMonths(x.n)} · {x.g.flexibility === 'Strict' ? '🔒 Strict' : '🌊 Flexible'}
+               </div>
+               {x.emi && (
+                 <div className="mt-2 rounded-lg bg-indigo-50 px-3 py-2 text-xs text-indigo-800">
+                   EMI: <b>{short(x.emi.monthly)}/mo</b> for {x.emi.tenureMonths} months · {x.emi.annualRate}% annual interest
+                 </div>
+               )}
               <div className="h-2.5 rounded-full overflow-hidden flex bg-slate-200 mt-3">
                 {ASSETS.map((a) => (
                   <div key={a} style={{ width: `${x.mix[a]}%`, background: ASSET_META[a].color }} />

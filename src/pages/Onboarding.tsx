@@ -180,14 +180,14 @@ function CustomList({
         </div>
       )}
       {items.map((i) => (
-        <div key={i.id} className="flex gap-2 items-center">
+        <div key={i.id} className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <input
             className={`${inputCls} flex-1`}
             placeholder="Name (e.g. Education)"
             value={i.name}
             onChange={(e) => update(i.id, { name: e.target.value })}
           />
-          <div className="relative w-40">
+          <div className="relative w-full sm:w-40">
             <span className="absolute left-3 top-2.5 text-slate-400 text-sm">₹</span>
             <input
               inputMode="numeric"
@@ -197,7 +197,7 @@ function CustomList({
               onChange={(e) => update(i.id, { amount: Number(e.target.value.replace(/\D/g, '')) })}
             />
           </div>
-          <button type="button" onClick={() => onChange(items.filter((x) => x.id !== i.id))} className="text-slate-400 hover:text-red-500">
+          <button type="button" onClick={() => onChange(items.filter((x) => x.id !== i.id))} className="self-end text-slate-400 hover:text-red-500 sm:self-auto">
             <Trash2 size={16} />
           </button>
         </div>
@@ -365,8 +365,8 @@ export default function Onboarding() {
 
   if (done) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="card max-w-md w-full p-10 text-center">
+      <div className="min-h-screen flex items-center justify-center p-4 sm:p-6">
+        <div className="card w-full max-w-md p-6 text-center sm:p-10">
           <div className="text-6xl animate-bounce">🎉</div>
           <h2 className="text-2xl font-extrabold mt-4">You're all set, {p.name.split(' ')[0]}!</h2>
           <p className="text-slate-500 mt-2 text-sm">
@@ -389,10 +389,10 @@ export default function Onboarding() {
   const s = steps[step]
 
   return (
-    <div className="min-h-screen flex items-start justify-center p-4 sm:p-8">
+    <div className="min-h-screen flex items-start justify-center p-3 sm:p-8">
       <div className="grid lg:grid-cols-[1fr_420px] gap-6 max-w-[1400px] w-full">
-        <div className="card p-6 sm:p-10">
-          <div className="flex items-center justify-between">
+        <div className="card min-w-0 p-4 sm:p-10">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="text-lg font-extrabold tracking-widest text-brand-600">KAIROS</div>
             <div className="flex items-center gap-4">
               {editing && (
@@ -400,7 +400,7 @@ export default function Onboarding() {
                   Cancel
                 </button>
               )}
-              <div className="text-xs font-semibold text-slate-500">
+              <div className="text-right text-xs font-semibold text-slate-500">
                 Step {step + 1} of {steps.length} · {s.cheer}
               </div>
             </div>
@@ -409,7 +409,7 @@ export default function Onboarding() {
             <div className="h-full bg-gradient-to-r from-brand-600 to-accent-400 transition-all duration-500" style={{ width: `${((step + 1) / steps.length) * 100}%` }} />
           </div>
 
-          <h2 className="text-3xl font-extrabold mt-8">
+          <h2 className="mt-8 text-2xl font-extrabold sm:text-3xl">
             <span className="mr-2">{s.emoji}</span>
             {s.title}
           </h2>
@@ -731,7 +731,7 @@ export default function Onboarding() {
 
           {error && <p className="text-sm text-red-500 mt-6">{error}</p>}
 
-          <div className="flex justify-between items-center mt-10">
+          <div className="mt-10 flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={() => {
@@ -753,7 +753,7 @@ export default function Onboarding() {
           </div>
         </div>
 
-        <aside className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 text-white p-7 flex flex-col gap-6 lg:sticky lg:top-6 lg:self-start">
+        <aside className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 p-5 text-white flex flex-col gap-6 sm:p-7 lg:sticky lg:top-6 lg:self-start">
           <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-accent-400/20 blur-3xl" />
           <div className="absolute -bottom-20 -left-16 w-64 h-64 rounded-full bg-brand-500/30 blur-3xl" />
 

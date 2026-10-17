@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useProfile } from '../store/ProfileContext'
-import { getMetrics, short, monthsUntil } from '../lib/finance'
+import { getMetrics, goalEmi, goalFundingTarget, short, monthsUntil } from '../lib/finance'
 
 const goalIcon: Record<string, string> = {
   'Home Purchase': '🏠',
@@ -51,7 +51,7 @@ function SafeToSpend({ left, creditDay }: { left: number; creditDay: number }) {
   const value = mode === 'daily' ? safe / days : safe
   return (
     <div className="card p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="font-bold">Safe to spend</div>
         <div className="flex rounded-full bg-slate-100 p-1 text-xs font-semibold">
           {(['daily', 'total'] as const).map((k) => (
@@ -128,17 +128,17 @@ export default function Dashboard() {
   
 
   return (
-    <div className="max-w-6xl space-y-6">
+    <div className="w-full max-w-6xl space-y-6">
       <div>
-        <h1 className="text-3xl font-extrabold text-ink-900">Hi, {profile.name.split(' ')[0]} 👋</h1>
+        <h1 className="text-2xl font-extrabold text-ink-900 sm:text-3xl">Hi, {profile.name.split(' ')[0]} 👋</h1>
         <p className="text-slate-500 mt-1">Here is how fast your wealth is moving today.</p>
       </div>
 
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 text-white p-8 grid md:grid-cols-[320px_1fr] gap-8 items-center">
+      <div className="relative grid items-center gap-8 overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 p-5 text-white sm:p-8 md:grid-cols-[320px_minmax(0,1fr)]">
         <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-accent-400/20 blur-3xl" />
         <div className="relative">
           <div className="text-sm text-slate-300 text-center">Wealth Velocity</div>
-          <div className="relative w-72 mx-auto mt-2">
+          <div className="relative mx-auto mt-2 w-full max-w-72">
             <svg viewBox="0 0 200 110" className="w-full">
               <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="14" strokeLinecap="round" pathLength={100} />
               <path
@@ -186,13 +186,13 @@ export default function Dashboard() {
       <div className="grid lg:grid-cols-2 gap-4">
         <SafeToSpend left={m.left} creditDay={profile.salaryCreditDate} />
 
-        <div className="card p-6">
+        <div className="card min-w-0 p-5 sm:p-6">
           <div className="font-bold">Where your money goes</div>
           {spendData.length === 0 ? (
             <p className="text-sm text-slate-500 mt-4">Add your spending in Edit profile to see the breakdown.</p>
           ) : (
-            <div className="grid grid-cols-[150px_1fr] gap-4 items-center mt-2">
-              <div className="h-[150px] relative">
+            <div className="mt-2 grid grid-cols-1 items-center gap-4 sm:grid-cols-[150px_minmax(0,1fr)]">
+              <div className="relative mx-auto h-[150px] w-full max-w-[150px] sm:mx-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={spendData} dataKey="value" nameKey="name" innerRadius={42} outerRadius={70} paddingAngle={2} stroke="none">
@@ -208,12 +208,12 @@ export default function Dashboard() {
                   <span className="text-sm font-extrabold">{short(spendTotal)}</span>
                 </div>
               </div>
-              <ul className="space-y-1.5 text-sm">
+              <ul className="min-w-0 space-y-1.5 text-sm">
                 {spendData.slice(0, 6).map((d, i) => (
                   <li key={d.name + i} className="flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-2 text-slate-600">
+                    <span className="min-w-0 flex items-center gap-2 text-slate-600">
                       <span className="w-2.5 h-2.5 rounded-full" style={{ background: palette[i % palette.length] }} />
-                      {d.name}
+                      <span className="truncate">{d.name}</span>
                     </span>
                     <span className="font-semibold">{short(d.value)}</span>
                   </li>
@@ -235,26 +235,29 @@ export default function Dashboard() {
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
             {m.goals.map((g) => {
               const share = m.requiredTotal ? (m.sip * g.need) / m.requiredTotal : 0
-              const pct = g.need ? Math.min(100, Math.round((share / g.need) * 100)) : 0
               const months = g.targetDate ? monthsUntil(g.targetDate) : 0
+              const fundingTarget = goalFundingTarget(g)
+              const pct = g.need ? Math.min(100, Math.round((share / g.need) * 100)) : fundingTarget === 0 ? 100 : 0
+              const emi = goalEmi(g)
               return (
-                <div key={g.id} className="card p-5">
-                  <div className="flex items-center justify-between">
-                    <div className="font-bold">
+                <div key={g.id} className="card min-w-0 p-5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 break-words font-bold">
                       {goalIcon[g.type]} {g.type === 'Custom' && g.name ? g.name : g.type}
                     </div>
                     <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
                       {g.flexibility === 'Strict' ? '🔒 Strict' : '🌊 Flexible'}
                     </span>
                   </div>
-                  <div className="text-2xl font-extrabold mt-3">{short(g.targetAmount)}</div>
-                  <div className="text-xs text-slate-500">
-                    in {months >= 12 ? `${Math.floor(months / 12)} yr ${months % 12} mo` : `${months} mo`}
-                  </div>
+                   <div className="text-2xl font-extrabold mt-3">{short(fundingTarget)}</div>
+                   {emi && <div className="mt-1 text-xs font-semibold text-indigo-600">Down payment · EMI {short(emi.monthly)}/mo</div>}
+                   <div className="text-xs text-slate-500">
+                     {emi ? `${short(g.targetAmount)} purchase · ` : ''}in {months >= 12 ? `${Math.floor(months / 12)} yr ${months % 12} mo` : `${months} mo`}
+                   </div>
                   <div className="h-2 rounded-full bg-slate-200 mt-4 overflow-hidden">
                     <div className="h-full rounded-full bg-gradient-to-r from-brand-600 to-accent-400 transition-all" style={{ width: `${pct}%` }} />
                   </div>
-                  <div className="flex justify-between text-xs mt-2 text-slate-500">
+                  <div className="mt-2 flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs text-slate-500">
                     <span>SIP share: {short(share)}</span>
                     <span>Needs: {short(g.need)}/mo</span>
                   </div>

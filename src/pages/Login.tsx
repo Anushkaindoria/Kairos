@@ -29,8 +29,8 @@ export default function Login({ onAuth }: { onAuth: (name: string, email: string
     'w-full bg-white/80 border border-slate-200 rounded-xl pl-10 pr-3 py-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20'
 
   return (
-    <div className="min-h-screen flex">
-      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 text-white p-14 flex-col justify-between">
+     <div className="min-h-screen flex">
+       <div className="hidden lg:flex flex-1 bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 text-white p-10 xl:p-14 flex-col justify-between">
         <Logo light size={56} />
         <div>
           <h1 className="text-4xl font-extrabold leading-tight">
@@ -43,8 +43,8 @@ export default function Login({ onAuth }: { onAuth: (name: string, email: string
         <div className="text-xs text-slate-400">100% offline AI · Zero data egress</div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-6">
-        <form onSubmit={submit} className="card w-full max-w-md p-8 space-y-4">
+       <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
+         <form onSubmit={submit} className="card w-full max-w-md p-5 sm:p-8 space-y-4">
           <h2 className="text-2xl font-bold">{mode === 'login' ? 'Welcome back' : 'Create your account'}</h2>
           <p className="text-sm text-slate-500">
             {mode === 'login' ? 'Log in to continue.' : 'Takes less than a minute.'}

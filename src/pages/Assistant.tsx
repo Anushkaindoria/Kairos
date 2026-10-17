@@ -108,6 +108,7 @@ function financialContext(profile: Profile, transactions: StoredTransaction[]) {
           name: goal.name || goal.type,
           type: goal.type,
           target_amount: goal.targetAmount,
+          funding_target: goal.fundingTarget,
           target_date: goal.targetDate,
           months_left: goal.monthsLeft,
           required_sip: goal.need,
@@ -115,6 +116,16 @@ function financialContext(profile: Profile, transactions: StoredTransaction[]) {
           progress_percent: goal.pct,
           monthly_gap: goal.gap,
           on_track: goal.onTrack,
+          ...(goal.emi
+            ? {
+                purchase_plan: 'emi',
+                down_payment: goal.emi.downPayment,
+                monthly_emi: goal.emi.monthly,
+                emi_tenure_months: goal.emi.tenureMonths,
+                emi_annual_rate: goal.emi.annualRate,
+                emi_total_repayment: goal.emi.totalRepayment,
+              }
+            : { purchase_plan: 'cash' }),
         })),
       },
       transactions,
@@ -303,27 +314,27 @@ export default function Assistant() {
   if (!profile) return null
 
   return (
-    <div className="max-w-5xl space-y-6">
+    <div className="w-full max-w-5xl space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-brand-600 text-sm font-semibold">
             <Sparkles size={16} /> Private local intelligence
           </div>
-          <h1 className="text-3xl font-extrabold text-ink-900 mt-1">KAIROS Copilot</h1>
+          <h1 className="mt-1 text-2xl font-extrabold text-ink-900 sm:text-3xl">KAIROS Copilot</h1>
           <p className="text-slate-500 mt-1">Turn your money data into a clear next move.</p>
         </div>
-        <div className="flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700">
+        <div className="flex max-w-full items-center gap-2 break-words rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
           <ShieldCheck size={15} /> Local only · {OLLAMA_MODEL}
         </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 text-white p-6 md:p-8">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 p-5 text-white sm:p-6 md:p-8">
         <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-accent-400/20 blur-3xl" />
-        <div className="relative flex gap-4 items-start">
+        <div className="relative flex items-start gap-4">
           <div className="w-12 h-12 shrink-0 rounded-2xl bg-white/15 flex items-center justify-center">
             <Bot size={25} />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="text-lg font-extrabold">Your financial context stays on this device</div>
             <p className="text-sm text-slate-300 mt-1 max-w-2xl">
               KAIROS sends this browser context only to your locally running Ollama model. It uses your cash flow,
@@ -331,7 +342,7 @@ export default function Assistant() {
             </p>
           </div>
         </div>
-        <div className="relative grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+        <div className="relative mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-2xl bg-white/10 p-3">
             <div className="text-[11px] text-slate-300">Velocity</div>
             <div className="font-extrabold mt-1">{metrics?.status}</div>
@@ -364,7 +375,7 @@ export default function Assistant() {
         </div>
       )}
 
-      <div className="card p-4 md:p-6">
+      <div className="card min-w-0 p-4 md:p-6">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="font-extrabold text-lg">Ask about your plan</h2>
@@ -393,7 +404,7 @@ export default function Assistant() {
           {messages.map((message, index) => (
             <div key={`${message.role}-${index}`} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div
-                className={`max-w-[90%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                 className={`max-w-full break-words rounded-2xl px-4 py-3 text-sm leading-relaxed [overflow-wrap:anywhere] whitespace-pre-wrap sm:max-w-[90%] ${
                   message.role === 'user' ? 'bg-brand-600 text-white rounded-br-md' : 'bg-slate-100 text-slate-700 rounded-bl-md'
                 }`}
               >
@@ -409,9 +420,9 @@ export default function Assistant() {
           ))}
         </div>
 
-        <form onSubmit={submit} className="flex items-end gap-2 mt-5">
+        <form onSubmit={submit} className="mt-5 flex flex-col items-stretch gap-2 sm:flex-row sm:items-end">
           <textarea
-            className={`${inputCls} min-h-12 max-h-32 resize-y`}
+             className={`${inputCls} min-h-12 max-h-32 min-w-0 flex-1 resize-y`}
             rows={1}
             placeholder="Ask KAIROS about your spending, goals, or safe-to-invest amount…"
             value={input}
@@ -422,7 +433,7 @@ export default function Assistant() {
             <button
               type="button"
               onClick={stop}
-              className="shrink-0 flex items-center gap-2 rounded-2xl bg-slate-800 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-700 transition"
+               className="flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-slate-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 sm:w-auto"
             >
               <StopCircle size={17} /> Stop
             </button>
@@ -430,7 +441,7 @@ export default function Assistant() {
             <button
               type="submit"
               disabled={!input.trim()}
-              className="shrink-0 flex items-center gap-2 rounded-2xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 hover:bg-brand-500 transition disabled:cursor-not-allowed disabled:opacity-50"
+               className="flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:bg-brand-500 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
               <Send size={17} /> Ask
             </button>
@@ -441,7 +452,7 @@ export default function Assistant() {
       <div className="flex items-start gap-2 text-xs text-slate-400 px-1">
         <ShieldCheck size={14} className="shrink-0 mt-0.5" />
         <p>
-          Ollama endpoint: <span className="font-mono">{OLLAMA_BASE_URL}</span>. KAIROS provides educational estimates,
+           Ollama endpoint: <span className="break-all font-mono">{OLLAMA_BASE_URL}</span>. KAIROS provides educational estimates,
           not investment advice. Verify important decisions independently.
         </p>
       </div>

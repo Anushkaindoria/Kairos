@@ -25,12 +25,12 @@ function VelocityDemo() {
   const fill = Math.min(100, (ratio / 1.5) * 100)
 
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 text-white p-7 shadow-2xl shadow-brand-500/30">
+    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 text-white p-5 sm:p-7 shadow-2xl shadow-brand-500/30">
       <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-accent-400/20 blur-3xl" />
       <div className="relative">
         <div className="text-sm text-slate-300">Goal: Home down payment, ₹20 L in 5 years</div>
 
-        <div className="relative w-64 mx-auto mt-4">
+        <div className="relative w-full max-w-64 mx-auto mt-4">
           <svg viewBox="0 0 200 110" className="w-full">
             <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="14" strokeLinecap="round" pathLength={100} />
             <path
@@ -94,15 +94,15 @@ export default function Landing() {
   return (
     <div className="min-h-screen">
       <nav className="sticky top-0 z-20 backdrop-blur-md bg-white/60 border-b border-white/50">
-        <div className="flex items-center justify-between max-w-6xl mx-auto px-6 py-4">
-          <Logo />
+        <div className="flex items-center justify-between gap-3 max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <Logo size={40} tagline={false} />
           <div className="flex items-center gap-2">
-            <Link to="/login?mode=login" className="px-4 py-2 text-sm font-semibold text-slate-700 hover:text-brand-600">
+            <Link to="/login?mode=login" className="px-2 sm:px-4 py-2 text-sm font-semibold text-slate-700 hover:text-brand-600">
               Log in
             </Link>
             <Link
               to="/login?mode=signup"
-              className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-500/30 transition"
+              className="px-3 sm:px-5 py-2.5 rounded-xl text-sm font-semibold bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-500/30 transition"
             >
               Sign up
             </Link>
@@ -110,9 +110,9 @@ export default function Landing() {
         </div>
       </nav>
 
-      <header className="max-w-6xl mx-auto px-6 pt-14 pb-20 grid lg:grid-cols-[1.05fr_1fr] gap-12 items-center">
+      <header className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-14 pb-14 sm:pb-20 grid lg:grid-cols-[1.05fr_1fr] gap-8 sm:gap-12 items-center">
         <div>
-          <h1 className="text-4xl sm:text-6xl font-extrabold leading-[1.05] text-ink-900">
+          <h1 className="text-4xl sm:text-6xl font-extrabold leading-[1.05] text-ink-900 break-words">
             Know if your money is keeping up with your dreams.
           </h1>
           <p className="text-lg text-slate-600 mt-6 max-w-lg">
@@ -137,10 +137,10 @@ export default function Landing() {
         <VelocityDemo />
       </header>
 
-      <section className="max-w-6xl mx-auto px-6 pb-20">
-        <h2 className="text-3xl font-extrabold text-ink-900 max-w-xl">Four things your bank app never tells you.</h2>
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20">
+        <h2 className="text-3xl sm:text-3xl font-extrabold text-ink-900 max-w-xl">Four things your bank app never tells you.</h2>
         <div className="grid md:grid-cols-6 gap-5 mt-8">
-          <div className="card p-7 md:col-span-4">
+          <div className="card p-5 sm:p-7 md:col-span-4">
             <Gauge className="text-brand-600" size={28} />
             <h3 className="text-xl font-bold mt-3">Wealth Velocity Cockpit</h3>
             <p className="text-slate-500 mt-1 max-w-md">One glance shows whether you are ahead, on track or falling behind, plus what is safe to spend today.</p>
@@ -151,19 +151,19 @@ export default function Landing() {
             </div>
           </div>
 
-          <div className="card p-7 md:col-span-2 bg-brand-600/5">
+          <div className="card p-5 sm:p-7 md:col-span-2 bg-brand-600/5">
             <Zap className="text-brand-600" size={28} />
             <h3 className="text-xl font-bold mt-3">What-If Simulator</h3>
             <p className="text-slate-500 mt-1">Planning to buy a ₹60,000 phone? See your home goal slip by days, before you pay.</p>
           </div>
 
-          <div className="card p-7 md:col-span-2">
+          <div className="card p-5 sm:p-7 md:col-span-2">
             <HandCoins className="text-brand-600" size={28} />
             <h3 className="text-xl font-bold mt-3">Panic circuit-breaker</h3>
             <p className="text-slate-500 mt-1">Market falling and your finger is on Sell? We pause, show the facts and ask you to think twice.</p>
           </div>
 
-          <div className="card p-7 md:col-span-4">
+          <div className="card p-5 sm:p-7 md:col-span-4">
             <Target className="text-brand-600" size={28} />
             <h3 className="text-xl font-bold mt-3">Milestone Glidepath</h3>
             <p className="text-slate-500 mt-1 max-w-md">Home, retirement, child education or your own dream. Move the time or the SIP and watch the plan update live.</p>
@@ -171,8 +171,8 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="max-w-6xl mx-auto px-6 pb-20">
-        <div className="rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 text-white p-10 sm:p-14 grid md:grid-cols-2 gap-8 items-center">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-14 sm:pb-20">
+        <div className="rounded-3xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-600 text-white p-6 sm:p-14 grid md:grid-cols-2 gap-8 items-center">
           <div>
             <h2 className="text-3xl font-extrabold">Your money data stays with you.</h2>
             <p className="text-slate-300 mt-3 max-w-md">Every calculation and every AI suggestion runs on your own device. No public AI APIs, no uploads.</p>
@@ -185,7 +185,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="max-w-3xl mx-auto px-6 pb-24 text-center">
+      <section className="max-w-3xl mx-auto px-4 sm:px-6 pb-20 sm:pb-24 text-center">
         <h2 className="text-3xl sm:text-4xl font-extrabold text-ink-900">Ready to see your own cockpit?</h2>
         <Link
           to="/login?mode=signup"

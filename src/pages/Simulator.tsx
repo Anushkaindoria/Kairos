@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { ShoppingBag, Lightbulb, ArrowRight, RotateCcw } from 'lucide-react'
 import { useProfile } from '../store/ProfileContext'
-import { goalProgress, simulate, short } from '../lib/finance'
-import type { SimMode } from '../lib/finance'
+import { goalFundingTarget, goalProgress, simulate, short } from '../lib/finance'
+import type { SimMode, TxLite } from '../lib/finance'
 import { TX_KEY, todayIso } from '../lib/reminder'
 
 const TABS: { id: SimMode; label: string; hint: string; max: number; step: number }[] = [
@@ -52,7 +52,7 @@ export default function Simulator() {
   const [applied, setApplied] = useState('')
   if (!profile) return null
 
-  let txs: any[] = []
+  let txs: TxLite[] = []
   try {
     txs = JSON.parse(localStorage.getItem(TX_KEY) || '[]')
   } catch {
@@ -83,10 +83,11 @@ export default function Simulator() {
     const sAfter = Math.max(0, g.share + sipChange * weight)
     const before = g.projected
     const after = fv(sAfter, g.monthsLeft) - loss * Math.pow(1 + r, g.monthsLeft)
-    const pctBefore = g.targetAmount > 0 ? Math.min(100, Math.round((before / g.targetAmount) * 100)) : 0
-    const pctAfter = g.targetAmount > 0 ? Math.max(0, Math.min(100, Math.round((after / g.targetAmount) * 100))) : 0
+    const target = goalFundingTarget(g)
+    const pctBefore = target > 0 ? Math.min(100, Math.round((before / target) * 100)) : 100
+    const pctAfter = target > 0 ? Math.max(0, Math.min(100, Math.round((after / target) * 100))) : 100
     const mBefore = g.monthsToFinish
-    const mAfter = monthsTo(g.targetAmount, sAfter, loss)
+    const mAfter = monthsTo(target, sAfter, loss)
     return { id: g.id, name: g.name || g.type, delta: after - before, pctBefore, pctAfter, mBefore, mAfter }
   })
 
@@ -120,14 +121,14 @@ export default function Simulator() {
 
   return (
     <div className="w-full">
-      <div className="mb-5">
-        <h1 className="text-3xl font-extrabold text-ink-900">What-If Spending Simulator</h1>
+       <div className="mb-5">
+         <h1 className="text-2xl font-extrabold text-ink-900 sm:text-3xl">What-If Spending Simulator</h1>
         <p className="mt-1 text-slate-500">See how a purchase today affects your goals tomorrow.</p>
       </div>
 
-      <div className="card space-y-6 p-6 sm:p-8">
+       <div className="card min-w-0 space-y-6 p-4 sm:p-8">
         {/* Tabs */}
-        <div className="flex rounded-2xl bg-slate-100 p-1">
+         <div className="flex overflow-x-auto rounded-2xl bg-slate-100 p-1">
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -137,7 +138,7 @@ export default function Simulator() {
                 setName('')
                 setApplied('')
               }}
-              className={`flex-1 rounded-xl px-2 py-2.5 text-xs font-semibold transition sm:text-sm ${
+               className={`min-w-[8.5rem] flex-1 whitespace-nowrap rounded-xl px-2 py-2.5 text-xs font-semibold transition sm:min-w-0 sm:text-sm ${
                 mode === t.id ? 'bg-brand-600 text-white shadow' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -216,7 +217,7 @@ export default function Simulator() {
                 const bothFinite = isFinite(x.mBefore) && isFinite(x.mAfter) && x.mBefore <= 1200
                 const diff = x.mAfter - x.mBefore
                 return (
-                  <div key={x.id} className="flex items-center justify-between gap-4 px-4 py-3.5">
+                   <div key={x.id} className="flex items-start justify-between gap-3 px-3 py-3.5 sm:items-center sm:px-4">
                     <div className="min-w-0">
                       <div className="truncate text-sm font-semibold text-ink-900">{x.name}</div>
                       <div className="mt-0.5 text-xs text-slate-500">
@@ -269,14 +270,14 @@ export default function Simulator() {
 
         {applied && <p className="text-sm font-medium text-emerald-600">✅ {applied}</p>}
 
-        <div className="flex justify-end gap-3">
-          <button onClick={reset} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+           <button onClick={reset} className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 sm:w-auto">
             <RotateCcw size={15} /> Reset
           </button>
           <button
             onClick={apply}
             disabled={!active}
-            className="flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:bg-brand-500 disabled:opacity-40"
+             className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:bg-brand-500 disabled:opacity-40 sm:w-auto"
           >
             Apply and see new plan <ArrowRight size={15} />
           </button>
